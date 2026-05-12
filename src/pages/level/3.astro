@@ -1,0 +1,26 @@
+---
+import LevelLayout from '../../components/LevelLayout.astro';
+import LoginForm from '../../components/LoginForm.astro';
+
+const measured = `
+- <strong>Mouse trajectory</strong> — every <code>mousemove</code> is recorded; on submit the path length is compared to its bounding-box diagonal. A ratio &lt; 1.005 means an essentially-straight jump.
+- <strong>Keystroke cadence</strong> — intervals between key events are profiled. Identical intervals or zero-spread intervals look mechanical.
+`;
+---
+<LevelLayout
+  levelNumber={3}
+  title="Mouse trajectory"
+  summary="Records mousemoves and keystrokes; scores them on form submit."
+  measured={measured}
+>
+  <LoginForm />
+</LevelLayout>
+
+<script>
+  import { attachLevel3 } from '../../detections/level3';
+  let detach = attachLevel3({ window, bus: window.__bus! });
+  window.__rerun = () => {
+    detach();
+    detach = attachLevel3({ window, bus: window.__bus! });
+  };
+</script>
