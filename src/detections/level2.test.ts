@@ -29,7 +29,7 @@ describe('runLevel2', () => {
       },
     };
     const bus = createBus();
-    await runLevel2({ window: fakeWin as Window, bus });
+    await runLevel2({ window: fakeWin as unknown as Window, bus });
     expect(bus.snapshot().some((e) => e.id === 'tostring-integrity' && e.status === 'fail')).toBe(true);
     // sanity: real one still works
     expect(native.call(parseInt)).toContain('native code');
