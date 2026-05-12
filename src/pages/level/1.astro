@@ -1,0 +1,29 @@
+---
+import LevelLayout from '../../components/LevelLayout.astro';
+import LoginForm from '../../components/LoginForm.astro';
+
+const measured = `
+- <code>navigator.webdriver</code> — must be <code>false</code> or undefined.
+- <code>window.chrome.runtime</code> — present in real Chrome.
+- <code>navigator.plugins.length</code> — non-zero in real Chrome.
+- <code>navigator.languages</code> — non-empty.
+- <code>User-Agent</code> — does not contain <code>HeadlessChrome</code>.
+- <code>Notification.permission</code> vs <code>permissions.query({name:"notifications"})</code> — should agree.
+`;
+---
+<LevelLayout
+  levelNumber={1}
+  title="The honest tell"
+  summary="Six passive flags that real Chrome sets and most automation contexts get wrong."
+  measured={measured}
+>
+  <LoginForm />
+</LevelLayout>
+
+<script>
+  import { runLevel1 } from '../../detections/level1';
+  const start = () => runLevel1({ window, bus: window.__bus! });
+  start();
+  // Re-run when the user clicks "Reset demo".
+  window.__rerun = start;
+</script>
