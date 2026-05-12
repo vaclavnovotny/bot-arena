@@ -54,4 +54,22 @@ describe('detection-bus', () => {
     bus.reset();
     expect(bus.snapshot()).toEqual([]);
   });
+
+  it('snapshot() returns a defensive copy that cannot mutate internal log', () => {
+    const bus = createBus();
+    bus.emit({ id: 'a', name: 'A', status: 'pass' });
+    const snap = bus.snapshot();
+    snap.push({ id: 'x', name: 'X', status: 'info', ts: 0 });
+    expect(bus.snapshot()).toHaveLength(1);
+  });
+
+  it('returns an unsubscribe function from onReset()', () => {
+    const bus = createBus();
+    const handler = vi.fn();
+    const off = bus.onReset(handler);
+    bus.reset();
+    off();
+    bus.reset();
+    expect(handler).toHaveBeenCalledTimes(1);
+  });
 });

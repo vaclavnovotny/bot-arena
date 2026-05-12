@@ -5,6 +5,7 @@ export interface DetectionEvent {
   name: string;
   status: DetectionStatus;
   detail?: string;
+  /** Milliseconds since page navigation start (performance.now()), or since Unix epoch (Date.now()) in non-browser environments. */
   ts: number;
 }
 
