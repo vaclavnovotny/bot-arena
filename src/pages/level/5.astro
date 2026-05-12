@@ -50,8 +50,17 @@ const measured = `
 
   document.getElementById('ts-form')?.addEventListener(
     'submit',
-    async () => {
+    async (ev) => {
+      ev.preventDefault();
+      ev.stopImmediatePropagation();
       await verifyAndEmit({ bus: window.__bus!, token: lastToken });
+      // Now run the arena-state logic that LoginForm would have run.
+      const form = ev.currentTarget as HTMLFormElement;
+      const events = window.__bus?.snapshot() ?? [];
+      const failed = events.some((e) => e.status === 'fail');
+      form.setAttribute('data-arena-state', failed ? 'blocked' : 'granted');
+      form.querySelector('[data-arena-granted]')?.classList.toggle('hidden', failed);
+      form.querySelector('[data-arena-blocked]')?.classList.toggle('hidden', !failed);
     },
     { capture: true }
   );

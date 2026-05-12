@@ -109,6 +109,9 @@ const nextLabel = levelNumber < 5 ? `Level ${levelNumber + 1} →` : 'About →'
         document.querySelectorAll('[data-arena-state]').forEach((el) => {
           el.removeAttribute('data-arena-state');
         });
+        document.querySelectorAll('[data-arena-granted],[data-arena-blocked]').forEach((el) => {
+          el.classList.add('hidden');
+        });
         // Re-run any registered rerun hooks (each level's detection module can register one).
         if (window.__rerun) window.__rerun();
       });
