@@ -1,0 +1,66 @@
+---
+import LevelLayout from '../../components/LevelLayout.astro';
+import LoginForm from '../../components/LoginForm.astro';
+
+const siteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? '1x00000000000000000000AA';
+
+const measured = `
+- <strong>Turnstile widget mode</strong> — managed; Cloudflare decides whether to challenge.
+- <strong>Server-side verification</strong> — the token is POSTed to <code>/api/turnstile/verify</code>, which calls Cloudflare's siteverify with the secret. The token is single-use; the secret never reaches the browser.
+`;
+---
+<LevelLayout
+  levelNumber={5}
+  title="Cloudflare Turnstile"
+  summary="Real Turnstile widget in managed mode, with server-side token verification."
+  measured={measured}
+>
+  <LoginForm formId="ts-form">
+    <div slot="extra" class="mt-4">
+      <div class="cf-turnstile" data-sitekey={siteKey} data-callback="onTurnstileOk" data-error-callback="onTurnstileErr"></div>
+    </div>
+  </LoginForm>
+</LevelLayout>
+
+<script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer is:inline></script>
+
+<script>
+  import { verifyAndEmit } from '../../detections/level5';
+
+  let lastToken: string | null = null;
+
+  (window as Window & { onTurnstileOk?: (t: string) => void; onTurnstileErr?: () => void }).onTurnstileOk = (token: string) => {
+    lastToken = token;
+    window.__bus!.emit({
+      id: 'turnstile-token',
+      name: 'Turnstile widget produced a token',
+      status: 'info',
+      detail: 'awaiting server-side siteverify on submit',
+    });
+  };
+  (window as Window & { onTurnstileOk?: (t: string) => void; onTurnstileErr?: () => void }).onTurnstileErr = () => {
+    lastToken = null;
+    window.__bus!.emit({
+      id: 'turnstile-token',
+      name: 'Turnstile widget error',
+      status: 'fail',
+      detail: 'widget did not produce a token',
+    });
+  };
+
+  document.getElementById('ts-form')?.addEventListener(
+    'submit',
+    async () => {
+      await verifyAndEmit({ bus: window.__bus!, token: lastToken });
+    },
+    { capture: true }
+  );
+
+  window.__rerun = () => {
+    lastToken = null;
+    const tsContainer = document.querySelector('.cf-turnstile');
+    if (tsContainer && (window as Window & { turnstile?: { reset: (el: Element) => void } }).turnstile) {
+      (window as unknown as { turnstile: { reset: (el: Element) => void } }).turnstile.reset(tsContainer);
+    }
+  };
+</script>
