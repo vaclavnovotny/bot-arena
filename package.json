@@ -1,6 +1,7 @@
 {
   "name": "bot-arena",
   "version": "1.0.0",
+  "type": "module",
   "main": "index.js",
   "directories": {
     "doc": "docs"
@@ -9,7 +10,9 @@
     "dev": "astro dev",
     "build": "astro build",
     "preview": "astro preview",
-    "check": "astro check"
+    "check": "astro check",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "keywords": [],
   "author": "",
@@ -17,7 +20,9 @@
   "description": "",
   "devDependencies": {
     "@types/node": "^25.7.0",
-    "typescript": "^6.0.3"
+    "happy-dom": "^20.9.0",
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.6"
   },
   "dependencies": {
     "@astrojs/cloudflare": "^12.6.13",
