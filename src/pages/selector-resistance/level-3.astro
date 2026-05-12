@@ -1,0 +1,126 @@
+---
+import LevelLayout from '../../components/LevelLayout.astro';
+
+const measured = `
+- The login form is rendered inside a <strong>closed shadow root</strong> on a custom element called <code>&lt;sealed-login&gt;</code>.
+- A closed shadow root is an explicit DOM-level privacy boundary. Nothing outside the component can read or write its internals — not <code>document.querySelector</code>, not the accessibility tree, not Playwright's locators, not even the shadow-piercing combinator <code>&gt;&gt;&gt;</code> (which works only on <em>open</em> shadow roots).
+- Inside the shadow root, a fully working form behaves like any other: focusable inputs, real submit, real success message — all inaccessible from outside.
+- A vision-based automation tool reads the visible labels and inputs off the rendered page. The DOM privacy boundary is irrelevant — the rendered pixels are public.
+`;
+
+const usedBy: Array<{ name: string; note: string }> = [
+  {
+    name: 'Salesforce Lightning (LWC)',
+    note: 'Lightning Web Components default to a Salesforce-managed shadow root. The entire CRM UI is built from sealed components — selectors get nowhere without Salesforce-specific tooling.',
+  },
+  {
+    name: 'ServiceNow Workspace and Now UI components',
+    note: 'ServiceNow\'s newer interfaces use Web Components with closed shadow roots. Test frameworks that ship with the platform are the only supported automation path.',
+  },
+  {
+    name: 'SAP UI5 and Fiori',
+    note: 'Major enterprise resource planning surfaces shipped by SAP encapsulate every widget. Standard selectors fail; SAP provides its own component-aware automation API.',
+  },
+  {
+    name: 'Polymer-based legacy apps (YouTube Studio, parts of Workspace)',
+    note: 'Older Google apps use Polymer, which can configure shadow roots as closed. External automation has been a known pain point for years.',
+  },
+  {
+    name: 'Stencil-generated component libraries (Ionic, several SaaS UIs)',
+    note: 'Stencil compiles to native Web Components and components can opt into closed shadows for tighter encapsulation. The pattern is widespread in enterprise design systems.',
+  },
+  {
+    name: 'Banking UI kits and PCI-scoped widgets',
+    note: 'Some banks ship login keypads and card-entry widgets as sealed Web Components, deliberately to prevent third-party scripts (and incidentally any automation) from reading inside.',
+  },
+];
+---
+<LevelLayout
+  section="selector-resistance"
+  localN={3}
+  title="Closed Shadow DOM"
+  summary="Real form inside a sealed web component. Selectors cannot reach it."
+  measured={measured}
+>
+  <sealed-login></sealed-login>
+  <p class="mt-3 max-w-sm text-xs text-slate-500">
+    The form lives inside a <code>&lt;sealed-login&gt;</code> custom element with <code>{`attachShadow({ mode: 'closed' })`}</code>.
+    Open DevTools and try <code>document.querySelector('sealed-login input')</code> — it returns <code>null</code>.
+  </p>
+
+  <section class="mt-10 max-w-2xl">
+    <h2 class="text-xs font-semibold uppercase tracking-widest text-slate-500">
+      Production apps using this technique
+    </h2>
+    <ul class="mt-3 grid gap-2 text-sm">
+      {usedBy.map((app) => (
+        <li class="rounded-lg border border-slate-200 bg-white p-3 shadow-sm">
+          <span class="font-semibold text-slate-900">{app.name}</span>
+          <span class="text-slate-600"> — <span set:html={app.note} /></span>
+        </li>
+      ))}
+    </ul>
+  </section>
+</LevelLayout>
+
+<script is:inline>
+  if (!customElements.get('sealed-login')) {
+    customElements.define('sealed-login', class extends HTMLElement {
+      constructor() {
+        super();
+        const shadow = this.attachShadow({ mode: 'closed' });
+        shadow.innerHTML = `
+          <style>
+            :host { display: block; max-width: 24rem; }
+            form { background: white; border: 1px solid #e2e8f0; border-radius: 0.75rem; padding: 1.5rem; box-shadow: 0 1px 2px rgba(0,0,0,0.05); font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+            h2 { font: bold 16px system-ui; margin: 0 0 4px; color: #0f172a; }
+            p.lead { font: 14px system-ui; color: #64748b; margin: 0 0 16px; }
+            label { display: block; font: 500 13px system-ui; color: #334155; margin-top: 12px; }
+            input { display: block; width: 100%; box-sizing: border-box; border: 1px solid #cbd5e1; border-radius: 6px; padding: 8px 12px; font: 14px system-ui; margin-top: 4px; }
+            input:focus { outline: none; border-color: #475569; }
+            button { display: block; width: 100%; margin-top: 20px; background: #0f172a; color: white; font: bold 14px system-ui; padding: 8px 12px; border: none; border-radius: 6px; cursor: pointer; }
+            button:hover { background: #1e293b; }
+            .ok { color: #059669; font: 600 14px system-ui; margin-top: 16px; display: none; }
+          </style>
+          <form>
+            <h2>Sign in</h2>
+            <p class="lead">Demo target — credentials are not checked.</p>
+            <label>Email
+              <input type="email" name="email" value="user@example.com" />
+            </label>
+            <label>Password
+              <input type="password" name="password" value="hunter2" />
+            </label>
+            <button type="submit">Sign in</button>
+            <div class="ok" data-ok>&#10003; Access granted</div>
+          </form>
+        `;
+        const form = shadow.querySelector('form');
+        const ok = shadow.querySelector('[data-ok]');
+        form.addEventListener('submit', (ev) => {
+          ev.preventDefault();
+          ok.style.display = 'block';
+          this.dispatchEvent(new CustomEvent('sealed-submit', { bubbles: true, composed: true, detail: { ok: true } }));
+        });
+      }
+    });
+  }
+  document.addEventListener('sealed-submit', () => {
+    if (window.__bus) {
+      window.__bus.emit({
+        id: 'sealed-submit',
+        name: 'Closed-shadow form submitted',
+        status: 'pass',
+        detail: 'inner form fired submit; access granted inside the sealed component',
+      });
+    }
+  });
+  if (window.__bus) {
+    window.__bus.emit({
+      id: 'sealed-armed',
+      name: 'Closed shadow root mounted',
+      status: 'info',
+      detail: 'The form contents are not visible to document.querySelector, getByLabel, or any selector engine.',
+    });
+  }
+</script>

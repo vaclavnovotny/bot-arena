@@ -378,6 +378,90 @@ await page.evaluate((t) =&gt; {
     },
   },
   {
+    n: 8,
+    section: 'Selector resistance',
+    title: 'Closed Shadow DOM',
+    family: 'Sealed web component',
+    testCode: sharedTest(3, '/selector-resistance/level-3/'),
+    failureMessage: selectorFailure,
+    signals: [
+      { status: 'info', id: 'sealed-mounted', detail: '<sealed-login> custom element with attachShadow({ mode: "closed" })' },
+      { status: 'fail', id: 'getByLabel-email', detail: "page.getByLabel('Email') — locator cannot pierce a closed shadow root." },
+      { status: 'fail', id: 'shadow-piercer', detail: "page.locator('sealed-login >>> input') — the >>> combinator works only on OPEN shadow roots." },
+      { status: 'fail', id: 'getByText-granted', detail: 'page.getByText("Access granted") fails too — the success message also lives inside the sealed shadow.' },
+    ],
+    layman: {
+      problem:
+        'Many modern web apps build their UI as Web Components — small, self-contained widgets where the internal structure is intentionally hidden from outside code. A "closed shadow root" is the strongest form of this: even your own JavaScript running on the same page cannot read or write what is inside. This is a deliberate privacy and encapsulation boundary used by component libraries, design systems, and many enterprise SaaS frontends. To a test, the component is a black box: the element exists, but the inputs, the button, and even the success message are unreachable.',
+      workaround:
+        'A vision-based automation tool screenshots the rendered page and finds the input visually. The DOM privacy boundary is irrelevant — the rendered pixels are public. AIVA reads "Email", finds the box beneath it, clicks, types — exactly like a human looking at the screen. Closed shadow roots make automation harder only for tools that look at the DOM; they make it no harder for tools that look at the screen.',
+    },
+    playwright: {
+      difficulty: 5,
+      label: 'Impossible — closed shadow is opaque',
+      notes: `
+        <p><strong>Verdict: impossible from inside Playwright. Closed shadow roots are an explicit privacy boundary that Playwright respects.</strong></p>
+        <p class="mt-2">Playwright's locator engine can pierce <em>open</em> shadow roots automatically (and the <code>&gt;&gt;&gt;</code> combinator works there too). For a closed shadow root there is no path at all — not from <code>page.locator</code>, not from <code>page.evaluate</code> (the component author may not expose any reference), not from any selector trick.</p>
+        <p class="mt-2">The only theoretical paths are:</p>
+        <ul class="mt-2 list-disc space-y-1 pl-5">
+          <li>Convince the component author to expose <code>mode: 'open'</code> — rarely possible for third-party code.</li>
+          <li>Use a Chrome DevTools Protocol command that exposes the closed shadow — Playwright does not surface this in its public API.</li>
+          <li>Take a screenshot and use external OCR + <code>page.mouse.click(x, y)</code> — at which point you have rebuilt vision-based automation outside Playwright.</li>
+        </ul>
+        <p class="mt-2">For real apps built on closed Web Components, selector-based testing is structurally a dead end.</p>
+      `,
+    },
+    aiva: {
+      passes: true,
+      notes: `
+        <p><strong>AIVA passes this level natively.</strong> AIVA reads the rendered page through screenshots and OCR; it has no concept of DOM accessibility at all. The shadow boundary is invisible to it because the pixels on the screen do not know they are coming from a sealed component. The form is filled, submitted, and "Access granted" is visible — same as any other login page.</p>
+        <p class="mt-2">As a category, web-component-heavy frontends (Salesforce Lightning, ServiceNow, SAP UI5, and most enterprise design systems) put selector-based testing in a permanent disadvantage. Vision-based tools are unaffected.</p>
+      `,
+    },
+  },
+  {
+    n: 9,
+    section: 'Selector resistance',
+    title: 'Iframe-embedded form',
+    family: 'Form in a child browsing context',
+    testCode: sharedTest(4, '/selector-resistance/level-4/'),
+    failureMessage: selectorFailure,
+    signals: [
+      { status: 'info', id: 'iframe-mounted', detail: 'The form is in an <iframe srcdoc="..."> with its own document.' },
+      { status: 'fail', id: 'getByLabel-email', detail: "page.getByLabel('Email') — runs on the main frame only; the form is in a child frame so the locator never resolves." },
+      { status: 'fail', id: 'getByText-granted', detail: 'page.getByText("Access granted") — same problem; the message lives in the child frame.' },
+      { status: 'info', id: 'requires-frame-locator', detail: 'Test would have to be rewritten to use page.frameLocator("iframe").getByLabel(...) — every assertion + interaction explicitly frame-scoped.' },
+    ],
+    layman: {
+      problem:
+        'A huge fraction of production websites embed third-party widgets via iframes — Stripe payment forms, Auth0 login dialogs, Cloudflare challenges, embedded support chats, social login buttons. From the page\'s perspective the iframe is a single rectangle; the form inside it is in a separate document with its own DOM. Playwright\'s standard locators (the ones every tutorial teaches) only search the main page, so they silently miss anything inside a frame. The test fails the same way as if the form did not exist.',
+      workaround:
+        'AIVA does not know or care whether a region of the screen comes from the main page or a child frame. The screenshot is one image; the form is one rectangle of pixels; the email box sits below the "Email" text. Vision-based automation traverses frame boundaries for free, because frames are a DOM concept that does not exist in the rendered image.',
+    },
+    playwright: {
+      difficulty: 3,
+      label: 'Requires every test to be frame-aware',
+      notes: `
+        <p><strong>Verdict: solvable but every test that touches frame content has to be rewritten with explicit <code>frameLocator</code> calls.</strong></p>
+        <p class="mt-2">The frame-aware version of this test would look like:</p>
+        <pre class="mt-2 overflow-x-auto rounded bg-slate-900 p-3 font-mono text-[11px] leading-relaxed text-slate-100">const frame = page.frameLocator('iframe[title="login-frame"]');
+await frame.getByLabel('Email').fill('user@example.com');
+await frame.getByLabel('Password').fill('hunter2');
+await frame.getByRole('button', { name: 'Sign in' }).click();
+await expect(frame.getByText('Access granted')).toBeVisible();</pre>
+        <p class="mt-2">For a single iframe this is annoying but tractable. In real applications the cost compounds: every Stripe payment field, every Auth0 step, every embedded widget is a separate frame. Some frames are cross-origin (Stripe Elements, for example), at which point Playwright cannot reach in at all — you would need a separate test running against the iframe URL directly, with no shared session.</p>
+        <p class="mt-2">Net effect: frame-heavy SaaS produces brittle, fragmented test suites where one frame change cascades into many test rewrites.</p>
+      `,
+    },
+    aiva: {
+      passes: true,
+      notes: `
+        <p><strong>AIVA passes this level natively.</strong> AIVA's screenshot includes the iframe contents because the browser composites them into the page exactly like any other element. The image-recognition pipeline sees one form, finds the inputs visually, clicks and types. Frame boundaries do not exist at the pixel level.</p>
+        <p class="mt-2">This is a major real-world advantage. Payment flows (Stripe, Adyen, Braintree), embedded auth (Auth0, Okta, WorkOS), and most "embedded SDK" patterns ship as iframes — usually cross-origin. Vision-based automation handles them by construction; selector-based testing handles them only after significant per-frame rewrites, and not at all when the frames are cross-origin.</p>
+      `,
+    },
+  },
+  {
     n: 7,
     section: 'Selector resistance',
     title: 'Dynamic selectors',

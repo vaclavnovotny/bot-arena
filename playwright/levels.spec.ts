@@ -58,4 +58,20 @@ test.describe('Selector resistance', () => {
     await page.getByRole('button', { name: 'Sign in' }).click();
     await expect(page.getByText('Access granted')).toBeVisible();
   });
+
+  test('Level 3 sign in', async ({ page }) => {
+    await page.goto('/selector-resistance/level-3/');
+    await page.getByLabel('Email').fill('user@example.com');
+    await page.getByLabel('Password').fill('hunter2');
+    await page.getByRole('button', { name: 'Sign in' }).click();
+    await expect(page.getByText('Access granted')).toBeVisible();
+  });
+
+  test('Level 4 sign in', async ({ page }) => {
+    await page.goto('/selector-resistance/level-4/');
+    await page.getByLabel('Email').fill('user@example.com');
+    await page.getByLabel('Password').fill('hunter2');
+    await page.getByRole('button', { name: 'Sign in' }).click();
+    await expect(page.getByText('Access granted')).toBeVisible();
+  });
 });

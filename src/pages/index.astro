@@ -17,10 +17,12 @@ const sections = [
   {
     name: 'Selector resistance',
     slug: 'selector-resistance',
-    description: 'The DOM that selector-based automation depends on is absent or randomised.',
+    description: 'The DOM that selector-based automation depends on is absent, randomised, sealed, or in a different frame.',
     levels: [
       { localN: 1, name: 'Canvas-rendered login', blurb: 'No DOM form — pixels only on a <canvas>.' },
       { localN: 2, name: 'Dynamic selectors', blurb: 'Real form, but every id/name/class rerolls per request.' },
+      { localN: 3, name: 'Closed Shadow DOM', blurb: 'Form inside a web component with a sealed shadow root.' },
+      { localN: 4, name: 'Iframe-embedded form', blurb: 'Form lives in a child frame; page-scoped locators miss it.' },
     ],
   },
 ];
