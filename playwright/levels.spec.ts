@@ -44,59 +44,68 @@ async function attemptSignIn(page: Page): Promise<void> {
   await page.locator('button[type="submit"]').click();
 }
 
-async function assertBlocked(page: Page): Promise<void> {
+async function expectSignedIn(page: Page): Promise<void> {
   const form = page.locator('form[data-arena-form]');
-  await expect(form, 'form should reach data-arena-state="blocked"').toHaveAttribute(
-    'data-arena-state',
-    'blocked',
-    { timeout: 15_000 }
-  );
   await expect(
-    form.locator('[data-arena-blocked]'),
-    'visible "✗ Blocked — bot detected" message should appear'
+    form,
+    'expected the sign-in to succeed (data-arena-state="granted") but the bot was blocked'
+  ).toHaveAttribute('data-arena-state', 'granted', { timeout: 15_000 });
+  await expect(
+    form.locator('[data-arena-granted]'),
+    'visible "✓ Access granted" message should be shown'
   ).toBeVisible();
 }
 
-test.describe('bot-arena — Playwright tries to sign in and gets blocked at every level', () => {
-  test('Level 1 — sign in attempt is blocked by passive webdriver flags', async ({ page }) => {
+// Print the Detection Log after every test so failures show exactly which signals
+// caught the bot. Reads the bus from the page; safely no-ops if the page is gone.
+test.afterEach(async ({ page }, testInfo) => {
+  try {
+    if (!page.isClosed()) {
+      const events = await readLog(page);
+      const levelMatch = testInfo.title.match(/Level (\d)/);
+      const level = levelMatch ? Number(levelMatch[1]) : 0;
+      reportEvents(level, events);
+    }
+  } catch {
+    // page navigated away or context closed — nothing to report
+  }
+});
+
+test.describe('Automation suite — try to sign in at every level', () => {
+  test('Level 1 — sign in', async ({ page }) => {
     await page.goto('/level/1/');
-    await waitForEventCount(page, 6); // six passive checks complete on page load
+    await waitForEventCount(page, 6);
     await attemptSignIn(page);
-    await assertBlocked(page);
-    reportEvents(1, await readLog(page));
+    await expectSignedIn(page);
   });
 
-  test('Level 2 — sign in attempt is blocked by CDP / headless tells', async ({ page }) => {
+  test('Level 2 — sign in', async ({ page }) => {
     await page.goto('/level/2/');
-    await waitForEventCount(page, 5); // five Level-2 probes complete on page load
+    await waitForEventCount(page, 5);
     await attemptSignIn(page);
-    await assertBlocked(page);
-    reportEvents(2, await readLog(page));
+    await expectSignedIn(page);
   });
 
-  test('Level 3 — sign in attempt is blocked by mouse trajectory scoring', async ({ page }) => {
+  test('Level 3 — sign in', async ({ page }) => {
     await page.goto('/level/3/');
-    await waitForEventCount(page, 1); // wait for the "trajectory recorder armed" info event
+    await waitForEventCount(page, 1); // wait for the "trajectory armed" info event
     await attemptSignIn(page);
-    await assertBlocked(page);
-    reportEvents(3, await readLog(page));
+    await expectSignedIn(page);
   });
 
-  test('Level 4 — sign in attempt is blocked by fingerprint signals', async ({ page }) => {
+  test('Level 4 — sign in', async ({ page }) => {
     await page.goto('/level/4/');
-    await waitForEventCount(page, 4); // canvas/audio/webgl/font checks
+    await waitForEventCount(page, 4);
     await attemptSignIn(page);
-    await assertBlocked(page);
-    reportEvents(4, await readLog(page));
+    await expectSignedIn(page);
   });
 
-  test('Level 5 — sign in attempt is blocked by Cloudflare Turnstile', async ({ page }) => {
+  test('Level 5 — sign in', async ({ page }) => {
     await page.goto('/level/5/');
-    // Give Turnstile a few seconds to either issue a token (it won't, for Playwright)
-    // or render its interactive challenge. We're not solving anything manually.
+    // Give Turnstile a few seconds to evaluate. If it doesn't issue a token
+    // (likely for Playwright) submit will produce the 'no token' FAIL.
     await page.waitForTimeout(5_000);
     await attemptSignIn(page);
-    await assertBlocked(page);
-    reportEvents(5, await readLog(page));
+    await expectSignedIn(page);
   });
 });
