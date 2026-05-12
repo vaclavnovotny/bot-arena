@@ -3,28 +3,38 @@ import '../styles/global.css';
 import { DetectionLog } from './DetectionLog';
 
 interface Props {
-  levelNumber: 1 | 2 | 3 | 4 | 5 | 6 | 7;
+  section: 'bot-detection' | 'selector-resistance';
+  localN: 1 | 2 | 3 | 4 | 5;
   title: string;
   summary: string;
-  measured: string; // plain-language "what's measured" content
+  measured: string;
 }
 
-const { levelNumber, title, summary, measured } = Astro.props;
-const sectionName = levelNumber <= 5 ? 'Bot detection' : 'Selector resistance';
-const localN = levelNumber <= 5 ? levelNumber : levelNumber - 5;
+const { section, localN, title, summary, measured } = Astro.props;
 
-const prev = levelNumber > 1 ? `/level/${levelNumber - 1}` : '/';
-const next = levelNumber < 7 ? `/level/${levelNumber + 1}` : '/about';
+const sectionDisplayName = section === 'bot-detection' ? 'Bot detection' : 'Selector resistance';
+const sectionSize = section === 'bot-detection' ? 5 : 2;
 
-let nextLabel = 'About →';
-if (levelNumber < 7) {
-  const nextN = levelNumber + 1;
-  const nextSection = nextN <= 5 ? 'Bot detection' : 'Selector resistance';
-  const nextLocalN = nextN <= 5 ? nextN : nextN - 5;
-  nextLabel =
-    nextSection === sectionName
-      ? `Level ${nextLocalN} →`
-      : `${nextSection} · Level ${nextLocalN} →`;
+let prev: string;
+if (localN > 1) {
+  prev = `/${section}/level-${localN - 1}/`;
+} else if (section === 'selector-resistance') {
+  prev = '/bot-detection/level-5/';
+} else {
+  prev = '/';
+}
+
+let next: string;
+let nextLabel: string;
+if (localN < sectionSize) {
+  next = `/${section}/level-${localN + 1}/`;
+  nextLabel = `Level ${localN + 1} →`;
+} else if (section === 'bot-detection') {
+  next = '/selector-resistance/level-1/';
+  nextLabel = 'Selector resistance · Level 1 →';
+} else {
+  next = '/about';
+  nextLabel = 'About →';
 }
 ---
 <html lang="en">
@@ -32,7 +42,7 @@ if (levelNumber < 7) {
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <title>{sectionName} · Level {localN} — {title} · Bot Arena</title>
+    <title>{sectionDisplayName} · Level {localN} — {title} · Bot Arena</title>
     <script is:inline>
       // Bus must exist before any detection script runs.
       (function () {
@@ -81,9 +91,15 @@ if (levelNumber < 7) {
 
     <main class="mx-auto flex max-w-6xl gap-8 px-6 py-10">
       <section class="flex-1">
-        <div class="mb-1 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
-          <span class="rounded-full bg-slate-200 px-2 py-0.5 text-[10px] text-slate-700">{sectionName}</span>
+        <div class="mb-1 flex flex-wrap items-center gap-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
+          <span class="rounded-full bg-slate-200 px-2 py-0.5 text-[10px] text-slate-700">{sectionDisplayName}</span>
           <span>· Level {localN}</span>
+          <a
+            href={`/report#${section}-${localN}`}
+            class="ml-auto rounded-md border border-slate-300 bg-white px-2 py-0.5 text-[10px] font-medium normal-case tracking-normal text-slate-600 hover:bg-slate-50"
+          >
+            View on report ↗
+          </a>
         </div>
         <h1 class="text-3xl font-bold tracking-tight">{title}</h1>
         <p class="mt-2 max-w-2xl text-slate-600">{summary}</p>
@@ -128,7 +144,6 @@ if (levelNumber < 7) {
         document.querySelectorAll('[data-arena-granted],[data-arena-blocked]').forEach((el) => {
           el.classList.add('hidden');
         });
-        // Re-run any registered rerun hooks (each level's detection module can register one).
         if (window.__rerun) window.__rerun();
       });
     </script>

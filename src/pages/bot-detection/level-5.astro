@@ -10,7 +10,8 @@ const measured = `
 `;
 ---
 <LevelLayout
-  levelNumber={5}
+  section="bot-detection"
+  localN={5}
   title="Cloudflare Turnstile"
   summary="Real Turnstile widget in managed mode, with server-side token verification."
   measured={measured}
@@ -54,7 +55,6 @@ const measured = `
       ev.preventDefault();
       ev.stopImmediatePropagation();
       await verifyAndEmit({ bus: window.__bus!, token: lastToken });
-      // Now run the arena-state logic that LoginForm would have run.
       const form = ev.currentTarget as HTMLFormElement;
       const events = window.__bus?.snapshot() ?? [];
       const failed = events.some((e) => e.status === 'fail');

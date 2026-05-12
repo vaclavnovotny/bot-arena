@@ -11,7 +11,8 @@ const measured = `
 `;
 ---
 <LevelLayout
-  levelNumber={1}
+  section="bot-detection"
+  localN={1}
   title="The honest tell"
   summary="Five passive flags that real Chrome sets and most automation contexts get wrong."
   measured={measured}
@@ -23,6 +24,5 @@ const measured = `
   import { runLevel1 } from '../../detections/level1';
   const start = () => runLevel1({ window, bus: window.__bus! });
   start();
-  // Re-run when the user clicks "Reset demo".
   window.__rerun = start;
 </script>

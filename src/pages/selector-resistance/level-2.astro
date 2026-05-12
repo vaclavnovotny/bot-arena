@@ -1,8 +1,6 @@
 ---
 import LevelLayout from '../../components/LevelLayout.astro';
 
-// Randomise every selector-relevant attribute on every page request.
-// SSR-rendered per request, so a refresh produces a totally new DOM shape.
 const r = (): string => Math.random().toString(36).slice(2, 10);
 const ids = {
   form: r(),
@@ -25,7 +23,8 @@ const measured = `
 `;
 ---
 <LevelLayout
-  levelNumber={7}
+  section="selector-resistance"
+  localN={2}
   title="Dynamic selectors"
   summary="Real form, but every identifier rerolls on each request."
   measured={measured}
@@ -85,7 +84,6 @@ const measured = `
   document.querySelectorAll('[data-arena-form]').forEach((form) => {
     form.addEventListener('submit', (ev) => {
       ev.preventDefault();
-      // No detection — this level passes if the form was filled at all.
       const emailInput = form.querySelectorAll('input')[0];
       const passwordInput = form.querySelectorAll('input')[1];
       const ok = !!emailInput.value && !!passwordInput.value;
