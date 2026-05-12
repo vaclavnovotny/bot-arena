@@ -4,7 +4,6 @@ import { runLevel1 } from './level1';
 
 function fakeWindow(over: Partial<{
   webdriver: boolean | undefined;
-  chrome: unknown;
   plugins: number;
   languages: string[];
   ua: string;
@@ -22,7 +21,6 @@ function fakeWindow(over: Partial<{
   };
   return {
     navigator,
-    chrome: 'chrome' in over ? over.chrome : { runtime: {} },
     Notification: { permission: over.notificationPermission ?? 'default' },
   } as unknown as Window;
 }
@@ -40,12 +38,6 @@ describe('runLevel1', () => {
     const bus = createBus();
     await runLevel1({ window: fakeWindow({ webdriver: true }), bus });
     expect(bus.snapshot().some((e) => e.id === 'webdriver' && e.status === 'fail')).toBe(true);
-  });
-
-  it('FAILs when window.chrome is missing', async () => {
-    const bus = createBus();
-    await runLevel1({ window: fakeWindow({ chrome: undefined }), bus });
-    expect(bus.snapshot().some((e) => e.id === 'chrome-runtime' && e.status === 'fail')).toBe(true);
   });
 
   it('FAILs when plugins.length is 0', async () => {

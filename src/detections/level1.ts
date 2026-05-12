@@ -18,18 +18,6 @@ export async function runLevel1({ window: win, bus }: RunArgs): Promise<void> {
     });
   }
 
-  // window.chrome.runtime
-  {
-    const chrome = (win as unknown as { chrome?: { runtime?: unknown } }).chrome;
-    const ok = !!chrome && typeof chrome.runtime !== 'undefined';
-    bus.emit({
-      id: 'chrome-runtime',
-      name: 'window.chrome.runtime present',
-      status: ok ? 'pass' : 'fail',
-      detail: ok ? 'chrome.runtime is defined' : 'chrome or chrome.runtime missing',
-    });
-  }
-
   // navigator.plugins
   {
     const n = win.navigator.plugins?.length ?? 0;

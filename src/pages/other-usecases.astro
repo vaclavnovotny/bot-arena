@@ -1,0 +1,576 @@
+---
+import '../styles/global.css';
+import { Code } from 'astro:components';
+
+interface UseCase {
+  id: string;
+  n: number;
+  title: string;
+  family: string;
+  testCode: string;
+  failureMessage: string;
+  layman: {
+    problem: string;
+    workaround: string;
+    extra?: { heading: string; html: string };
+  };
+  repro: {
+    url: string;
+    goal: string;
+    steps: string[];
+    expected: string;
+  };
+}
+
+interface Group {
+  n: number;
+  title: string;
+  blurb?: string;
+  cases: UseCase[];
+}
+
+const groups: Group[] = [
+  {
+    n: 1,
+    title: 'Canvas & WebGL — what the user sees is not in the DOM',
+    blurb:
+      'When a library renders to <code>&lt;canvas&gt;</code> or WebGL, the rendered text, shapes and colors live as pixels, not as DOM nodes. Playwright\'s <code>getByText</code> sees nothing.',
+    cases: [
+      {
+        id: 'canvas-charts',
+        n: 1,
+        title: 'Canvas charts (Chart.js, ECharts)',
+        family: 'bar chart value reading',
+        testCode: `// Renders a Chart.js bar chart with values [40, 45, 60, 50, 35]
+// for Mon..Fri. The user expects to see "Wednesday" and "60".
+await expect(page.getByText('Wednesday', { exact: true })).toBeVisible();
+await expect(page.getByText('60', { exact: true })).toBeVisible();`,
+        failureMessage: `Error: expect(locator).toBeVisible() failed
+
+Locator: getByText('Wednesday', { exact: true })
+Expected: visible
+Error: element(s) not found
+
+Page snapshot:
+  - heading "Weekly hours" [level=1]`,
+        layman: {
+          problem:
+            'Both Chart.js and Apache ECharts render bar charts by drawing pixels into an HTML <code>&lt;canvas&gt;</code> element. The axis labels ("Monday", "Wednesday") and data labels ("60") are part of that picture — they are <em>not</em> text nodes anywhere in the DOM. A human reading the chart sees them; Playwright querying the DOM does not. The page snapshot shown to Playwright contains only the <code>&lt;h1&gt;</code>, because that is everything the DOM actually has.',
+          workaround:
+            'A visual agent looks at the rendered screenshot the same way a human does. Optical character recognition (or a multimodal model) extracts "Wednesday" and "60" from pixels. The assertion can be expressed in user terms — "the Wednesday bar shows 60 hours" — and verified against what is on screen.',
+          extra: {
+            heading: 'SVG counter-example',
+            html:
+              'Switching the same chart to Highcharts (which renders to SVG) makes Playwright work normally — SVG <code>&lt;text&gt;</code> nodes are real DOM. The split is <strong>canvas vs SVG</strong>, not "charts in general".',
+          },
+        },
+        repro: {
+          url: 'https://echarts.apache.org/examples/en/editor.html?c=bar-simple',
+          goal: 'Read the value of one bar (e.g., "Wed") from the rendered chart, by selector only — no screenshot, no OCR.',
+          steps: [
+            'Open the URL. The right pane shows a live ECharts bar chart with weekday labels and seven bars.',
+            'Wait until the chart finishes rendering.',
+            'Without taking a screenshot, locate the DOM node that contains the visible text "Wed" or any of the bar values (120, 200, 150, 80, 70, 110, 130).',
+            'Read the value associated with the "Wed" bar from the DOM.',
+          ],
+          expected:
+            'No DOM node contains the label "Wed" or the numeric values — they are all painted into <code>&lt;canvas&gt;</code>. A scripted tool fails the lookup; a visual tool reads them straight from the rendered image.',
+        },
+      },
+      {
+        id: 'webgl-3d',
+        n: 2,
+        title: 'WebGL 3D scene (Three.js)',
+        family: 'cube visibility check',
+        testCode: `// threejs.org example renders a rotating textured cube.
+// The user can see it clearly; Playwright reads the center pixel.
+const px = await canvas.evaluate(c => {
+  const gl = c.getContext('webgl2') || c.getContext('webgl');
+  const out = new Uint8Array(4);
+  gl.readPixels(c.width/2, c.height/2, 1, 1,
+                gl.RGBA, gl.UNSIGNED_BYTE, out);
+  return [out[0], out[1], out[2]];
+});
+expect(px[0] + px[1] + px[2]).toBeGreaterThan(0);`,
+        failureMessage: `Error: the center pixel of the canvas
+should be the visible cube, not blank black
+
+expect(received).toBeGreaterThan(expected)
+Expected: > 0
+Received:   0`,
+        layman: {
+          problem:
+            'The natural way to confirm a 3D viewer is rendering is to read the canvas pixels. Three.js — and almost every other WebGL library — uses <code>preserveDrawingBuffer: false</code> by default. The browser is allowed to wipe the buffer between frames, so <code>gl.readPixels()</code> from outside the render loop returns all zeros even when the scene is visibly drawn on screen. The cube is there for a human; from Playwright\'s vantage point the canvas is black.',
+          workaround:
+            'A screenshot of the actual rendered page does <em>not</em> go through the WebGL context — it captures the compositor output, the same thing your monitor displays. A visual agent has the rendered cube to work with directly, in colour.',
+        },
+        repro: {
+          url: 'https://threejs.org/examples/webgl_geometry_cube.html',
+          goal: 'Confirm that a textured 3D cube is rendered and visible on the page (not a blank or error scene).',
+          steps: [
+            'Open the URL. A standalone Three.js example loads — the page is mostly empty except for a single full-window <code>&lt;canvas&gt;</code> element.',
+            'Wait 1–2 seconds for the first frame to render.',
+            'Without taking a screenshot of the page, ask the canvas via <code>gl.readPixels()</code> what colour the center pixel is.',
+            'Alternatively, look for any DOM text that describes the rendered geometry (a label, badge, or status pill saying "cube" or showing its colour).',
+          ],
+          expected:
+            'The cube is plainly visible to a human; <code>gl.readPixels()</code> returns 0,0,0 because Three.js does not preserve the drawing buffer. No DOM text describes the rendered scene. A scripted tool cannot confirm what is on screen; a visual tool sees the cube directly.',
+        },
+      },
+      {
+        id: 'webgl-map',
+        n: 3,
+        title: 'WebGL maps (Mapbox GL)',
+        family: '"the map shows Brno"',
+        testCode: `// Centers a Mapbox GL map on Brno at zoom 12.
+// A user looking at the map sees the city name and roads.
+await expect(page.getByText('Brno', { exact: false })).toBeVisible();`,
+        failureMessage: `Error: expect(locator).toBeVisible() failed
+
+Locator: getByText('Brno', { exact: false })
+Expected: visible
+Error: element(s) not found`,
+        layman: {
+          problem:
+            'Mapbox GL JS (and similar libraries like Cesium and Deck.gl) paint streets, place names and POI labels directly into a WebGL canvas from vector-tile data. None of the human-readable text on the map exists in the DOM. The same flow on a non-WebGL library — say, Leaflet with raster tiles and HTML markers — would work fine, because labels there are real DOM nodes.',
+          workaround:
+            'Vision sees the map the way the user does. "Verify the city name \'Brno\' appears near the centre" becomes a screenshot crop plus text recognition — exactly how a tester would describe the check verbally.',
+        },
+        repro: {
+          url: 'https://docs.mapbox.com/mapbox-gl-js/example/simple-map/',
+          goal: 'Read any place name that is visible on the rendered map (city, street, country label).',
+          steps: [
+            'Open the URL. A live Mapbox GL map is embedded in the docs page, centered on Helsinki by default.',
+            'Wait for the tiles to load.',
+            'Look at the map: human-readable labels for cities, water bodies and streets are clearly visible.',
+            'Try to find any of these labels — "Helsinki", "Vantaa", "Baltic Sea", a street name — via DOM text search.',
+          ],
+          expected:
+            'The surrounding documentation text ("Display a map on a webpage", code snippets, side nav) is in the DOM. Every label drawn on the map itself is not — it is rasterised into the WebGL canvas from vector tiles. A scripted tool can verify the page chrome but never the map content.',
+        },
+      },
+    ],
+  },
+  {
+    n: 2,
+    title: 'Automation detection — the browser admits it is a robot',
+    blurb:
+      'The same family of detections Bot Arena demonstrates also blocks Playwright from interacting with any portal that is fronted by a serious bot manager.',
+    cases: [
+      {
+        id: 'bot-detection',
+        n: 4,
+        title: 'Public fingerprint pages (sannysoft, CreepJS)',
+        family: 'no automation tells',
+        testCode: `// bot.sannysoft.com prints a pass/fail table.
+// A real user has zero "failed" rows.
+await page.goto('https://bot.sannysoft.com/');
+const failingCells = page.locator('td.failed');
+await expect(failingCells).toHaveCount(0);`,
+        failureMessage: `Error: no bot-detection check should
+report failed for a real user
+
+expect(locator).toHaveCount(expected)
+Expected: 0
+Received: 13`,
+        layman: {
+          problem:
+            'This is the same family of detections Bot Arena demonstrates — <code>navigator.webdriver</code>, missing <code>chrome.runtime</code>, <code>HeadlessChrome</code> in the user agent, software-only WebGL renderer, and so on. Public test pages like sannysoft and CreepJS list them out openly: thirteen of them fail for plain Playwright. The same arithmetic plays out silently inside Cloudflare, Akamai or PerimeterX in front of real customer portals.',
+          workaround:
+            'A VNC-driven real Chrome <em>is</em> a real Chrome — none of the thirteen flags fire because the browser is not under automation control from the inside. <a class="underline" href="/report">The Bot Arena failure report</a> shows this on five layered scenarios.',
+        },
+        repro: {
+          url: 'https://bot.sannysoft.com/',
+          goal: 'Pass the public bot-detection battery — every check should report "passed", as it does for a regular human visitor.',
+          steps: [
+            'Open the URL.',
+            'The page renders two tables ("Intoli.com tests + additions" and "Fingerprint Scanner tests") where each row is one check.',
+            'Wait ~2 seconds for all checks to settle.',
+            'Count the table cells styled red ("failed"). For a real human Chrome this is zero or close to it.',
+          ],
+          expected:
+            'A real headed Chrome session passes virtually all checks. A scripted browser (Playwright, Puppeteer, Selenium) lights up roughly thirteen red cells — <code>navigator.webdriver</code>, <code>HeadlessChrome</code> in the UA, missing <code>chrome.runtime</code>, software-only WebGL renderer, and more. These are the same signals real bot-management services use.',
+        },
+      },
+      {
+        id: 'recaptcha',
+        n: 5,
+        title: 'Google reCAPTCHA v2 demo',
+        family: 'submit a protected form',
+        testCode: `// The official reCAPTCHA demo form.
+// A human ticks the checkbox and submits in 1 second.
+await page.goto('https://www.google.com/recaptcha/api2/demo');
+const captcha = page.frameLocator('iframe[title="reCAPTCHA"]');
+await captcha.locator('#recaptcha-anchor').click();
+await page.locator('#recaptcha-demo-submit').click();
+await expect(page.getByText(/Verification Success/i)).toBeVisible();`,
+        failureMessage: `Error: expect(locator).toBeVisible() failed
+
+Locator: getByText(/Verification Success/i)
+Expected: visible
+Error: element(s) not found
+(image-challenge presented instead of pass)`,
+        layman: {
+          problem:
+            'reCAPTCHA\'s silent path is exactly the same trust check as Cloudflare Turnstile (Bot Arena Level 5). When the checkbox click comes from a browser that has tripped the automation tells, Google falls back to an image challenge — pick the bicycles, etc. — that Playwright cannot solve. The token is never issued and the demo form never reports success.',
+          workaround:
+            'Same reason as Turnstile: a real Chrome session driven via VNC has a real fingerprint, real mouse trajectory, and real history. reCAPTCHA hands it the silent pass and the form submits without an image challenge ever appearing.',
+        },
+        repro: {
+          url: 'https://www.google.com/recaptcha/api2/demo',
+          goal: 'Submit the demo form and reach the "Verification Success" page — the same outcome a human gets in two clicks.',
+          steps: [
+            'Open the URL.',
+            'Click the "I\'m not a robot" checkbox (it lives inside an iframe titled "reCAPTCHA").',
+            'Wait for the spinner to resolve.',
+            'Click the "Submit" button at the bottom of the form.',
+            'Verify the next page displays the text "Verification Success".',
+          ],
+          expected:
+            'A real human passes silently — the checkbox turns into a green tick and Submit goes through. An automated browser gets an image challenge ("select all squares containing bicycles"), which is unsolvable without external vision/captcha-solver services. The Submit either never accepts the request or the result page never shows "Verification Success".',
+        },
+      },
+    ],
+  },
+  {
+    n: 3,
+    title: 'Media content — what is in this video?',
+    cases: [
+      {
+        id: 'youtube-video',
+        n: 6,
+        title: 'Video content recognition (YouTube embed)',
+        family: '"is the right video playing?"',
+        testCode: `// Embedded corporate-training video. The user verifies it
+// shows the correct speaker / scene.
+await page.goto('https://www.youtube.com/embed/dQw4w9WgXcQ?autoplay=1&mute=1');
+// Best Playwright can do is "is it playing?":
+const state = await page.locator('video').evaluate(v =>
+  v.currentTime > 0 ? 'playing' : null
+);
+expect(state).toMatch(/Rick Astley|singer|musician/i);`,
+        failureMessage: `Error: we should be able to describe
+what is shown in the video
+
+Expected pattern: /Rick Astley|singer|musician/i
+Received string:  "playing"`,
+        layman: {
+          problem:
+            'The HTML <code>&lt;video&gt;</code> element exposes <code>currentTime</code>, <code>duration</code> and <code>paused</code> — nothing about <em>what is being decoded into the visible frame</em>. A test author who wants to verify "the right training video is playing", "the speaker has appeared", or "the closing logo is shown" cannot get that from the DOM. The same applies to live-streaming dashboards, video-conferencing tiles, screen-share previews and CCTV grids.',
+          workaround:
+            'A frame screenshot plus a vision model answers the question directly: "describe what is on screen". The assertion can be the same plain English the customer used in the bug report.',
+        },
+        repro: {
+          url: 'https://www.youtube.com/embed/dQw4w9WgXcQ?autoplay=1&mute=1',
+          goal: 'Verify that the playing video shows a person performing/singing (not, say, a still title card or an error frame).',
+          steps: [
+            'Open the URL — the YouTube embed autoplays muted.',
+            'Wait 3 seconds so the player is past any title card and into the music video.',
+            'Without sampling a screenshot, ask the page what is visible in the video frame — a person, an outdoor scene, a logo, an error overlay?',
+          ],
+          expected:
+            'The <code>&lt;video&gt;</code> DOM element only exposes <code>currentTime</code>, <code>duration</code> and <code>paused</code>. The visible content of the decoded frame is not accessible. A scripted tool can only confirm "the video is playing"; it cannot confirm "the right video is playing".',
+        },
+      },
+    ],
+  },
+  {
+    n: 4,
+    title: 'UI timing & selector fragility',
+    blurb:
+      'Two failures where the rendered page is fully DOM-accessible — but the natural Playwright flow still breaks, because synthetic input and synthetic selectors do not match what the application actually responds to.',
+    cases: [
+      {
+        id: 'bpmn-typing',
+        n: 7,
+        title: 'Keystroke race against bpmn-js label commit',
+        family: 'demo.bpmn.io workflow modeler',
+        testCode: `// Create a task on the BPMN canvas, name it "Process order",
+// save and verify the exported XML.
+await page.locator('.djs-palette [title="Create task"]').click();
+await page.mouse.click(centerX, centerY);
+await page.keyboard.type('Process order');
+await page.keyboard.press('Escape');
+// Ctrl+S triggers the BPMN file download:
+const xml = await readDownload();
+expect(xml).toContain('Process order');`,
+        failureMessage: `Error: expect(received).toContain(expected)
+
+Expected substring: "Process order"
+Received string: ...
+  <bpmn:task id="Activity_00g..."
+             name="Proces" />`,
+        layman: {
+          problem:
+            'The Ctrl+S download actually succeeds — bpmn-js exports valid XML. The failure is more surprising: only "Proces" was recorded as the task name, not "Process order". <code>page.keyboard.type</code> fires synthetic events as fast as Chromium will accept them, with no inter-key delay. bpmn-js\'s text-input overlay debounces its label commit against the next blur/Escape — and Playwright\'s Escape arrives before the last few characters of "Process order" have made it through the debounce. A human typing at human speed never has this race.',
+          workaround:
+            'OS-level key events are paced by the real input pipeline. The same flow driven through VNC arrives at the application at human cadence, so debounce-style commits get the full string and the XML reflects what the user typed.',
+        },
+        repro: {
+          url: 'https://demo.bpmn.io/new',
+          goal: 'Create a BPMN task on the empty canvas, name it exactly "Process order", and export valid BPMN XML containing that name.',
+          steps: [
+            'Open the URL. An empty BPMN canvas appears with a vertical palette on the left edge.',
+            'Dismiss the Camunda cookie consent banner if it appears.',
+            'In the left palette, click the "Create task" entry (rectangle with a plus icon).',
+            'Click once on the canvas centre to drop the task.',
+            'A label input is auto-focused on the new task. Type "Process order" (13 characters including the space).',
+            'Press Escape to commit the label.',
+            'Click anywhere on the canvas, then press Ctrl+S — bpmn-js intercepts this and triggers a .bpmn file download.',
+            'Open the downloaded XML and search for the &lt;bpmn:task&gt; element. Verify its <code>name</code> attribute equals "Process order".',
+          ],
+          expected:
+            'The XML download itself works. A human typing at human cadence sees the task labelled "Process order". A scripted tool firing synthetic keypresses with no inter-key delay races bpmn-js\'s debounced commit — the exported XML shows <code>name="Proces"</code> (truncated). Adding artificial typing delay masks the bug rather than fixing it.',
+        },
+      },
+      {
+        id: 'odoo-invoice',
+        n: 8,
+        title: 'Odoo invoice form (full flow)',
+        family: 'customer + draft + post',
+        testCode: `// Fresh Odoo demo tenant. Create a customer, then a Customer
+// Invoice with one line, post it. Assert status = "Posted".
+await page.locator('div[name="partner_id"] input').click();
+await page.locator('div[name="partner_id"] input').fill(customerName);
+await page.getByRole('menuitem',
+  { name: new RegExp(customerName) }).first().click();
+await page.getByText('Add a line').click();
+await page.keyboard.type('Consulting services');
+// ... save, confirm, expect Posted`,
+        failureMessage: `TimeoutError: locator.click: Timeout 15000ms
+
+Call log:
+  waiting for getByRole('menuitem',
+    { name: /ACME\\s+Corp\\s+1778611142987/ }).first()
+  (autocomplete never surfaced the matching entry)`,
+        layman: {
+          problem:
+            'Odoo\'s web client is built on Owl, a reactive framework that mutates DOM around generated IDs and per-customer module configuration. Selectors that work today break on the next release; selectors that work on demo tenant A do not work on customer tenant B; the customer autocomplete in the invoice form is fed asynchronously and a synthetic <code>fill()</code> often does not trigger the surface of the matching menuitem in time. The same trained accountant who finishes this flow in thirty seconds never hits any of this.',
+          workaround:
+            'A visual driver targets what the user sees — the field labelled "Customer", the dropdown row whose visible text is "ACME Corp", the button captioned "Confirm". Those labels stay constant across Odoo releases and across customer customisations. The same recording transfers to a different tenant whose underlying DOM looks completely different.',
+        },
+        repro: {
+          url: 'https://demo.odoo.com',
+          goal: 'Create a customer, draft a one-line invoice for them, post it, and confirm the resulting status is "Posted" with a real invoice number (INV/YYYY/MM/NNNN).',
+          steps: [
+            'Open the URL. After two redirects you land on a fresh Odoo demo tenant logged in as admin/admin.',
+            'Open the app drawer and pick "Contacts".',
+            'Click the "New" button.',
+            'In the company-name field at the top of the form, type a unique customer name (e.g., "ACME Corp 1234").',
+            'In the Email field, type any address (e.g., "billing@acme.example").',
+            'Save with Ctrl+S or the cloud icon.',
+            'Open the app drawer again, pick "Invoicing", then navigate Customers → Invoices.',
+            'Click "New".',
+            'In the Customer field, click the input, type the customer name, and pick the matching entry from the autocomplete dropdown that surfaces.',
+            'Click "Add a line".',
+            'Type "Consulting services" in the description, Tab, then type 1000 in the Price field.',
+            'Save, then click the "Confirm" button at the top.',
+            'Verify the status bar shows "Posted" and the breadcrumb / record header shows an invoice number matching INV/YYYY/MM/NNNN.',
+          ],
+          expected:
+            'A trained accountant finishes this in under thirty seconds. A scripted tool gets through Contacts cleanly but stalls at the Customer autocomplete inside the invoice form — the partner dropdown is driven by an asynchronous suggestion fetch that synthetic <code>fill()</code> does not reliably trigger. Selector strings that work today break on the next Odoo release or on a customer-customised tenant.',
+        },
+      },
+    ],
+  },
+];
+
+const totalCases = groups.reduce((acc, g) => acc + g.cases.length, 0);
+const distinctGaps = groups.length;
+---
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Other use-cases — Bot Arena</title>
+    <meta
+      name="description"
+      content="Beyond bot detection: where pure Playwright still fails on real enterprise apps, and what a visual / AIVA approach changes."
+    />
+  </head>
+  <body class="min-h-screen bg-slate-50 text-slate-900">
+    <header class="border-b border-slate-200 bg-white">
+      <div class="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
+        <a href="/" class="text-lg font-semibold tracking-tight">🛡️ Bot Arena</a>
+        <nav class="flex gap-4 text-sm text-slate-600">
+          <a href="/" class="hover:text-slate-900">Home</a>
+          <a href="/report" class="hover:text-slate-900">Failure report</a>
+          <a href="/about" class="hover:text-slate-900">About</a>
+          <a href="https://github.com/vaclavnovotny/bot-arena" class="hover:text-slate-900">GitHub</a>
+        </nav>
+      </div>
+    </header>
+
+    <main class="mx-auto max-w-5xl px-6 py-12">
+      <p class="text-xs font-semibold uppercase tracking-widest text-slate-500">Other use-cases</p>
+      <h1 class="mt-2 text-4xl font-bold tracking-tight">Where pure Playwright still falls over</h1>
+      <p class="mt-4 max-w-3xl text-lg text-slate-600">
+        Bot detection is one well-known wall. There are several more — patterns where a human user finishes the task in seconds, the natural Playwright assertion is the same one any author would write, and the test still fails 10 out of 10 runs.
+      </p>
+
+      <div class="mt-8 grid gap-3 sm:grid-cols-3">
+        <div class="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+          <div class="text-xs font-semibold uppercase tracking-wide text-slate-500">Cases tested</div>
+          <div class="mt-1 text-3xl font-bold tracking-tight text-slate-900">{totalCases}</div>
+        </div>
+        <div class="rounded-xl border border-rose-200 bg-rose-50 p-5 shadow-sm">
+          <div class="text-xs font-semibold uppercase tracking-wide text-rose-700">Failed 10/10</div>
+          <div class="mt-1 text-3xl font-bold tracking-tight text-rose-900">{totalCases}</div>
+        </div>
+        <div class="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+          <div class="text-xs font-semibold uppercase tracking-wide text-slate-500">Distinct capability gaps</div>
+          <div class="mt-1 text-3xl font-bold tracking-tight text-slate-900">{distinctGaps}</div>
+        </div>
+      </div>
+
+      <p class="mt-8 max-w-3xl text-sm text-slate-500">
+        Headless Chromium driven by <code class="rounded bg-slate-100 px-1 py-0.5">@playwright/test</code> v1.49. Each spec was rerun ten times to distinguish stable failure from flake. All cases below fail 10/10 — they are capability gaps, not flakes.
+      </p>
+
+      {groups.map((group) => (
+        <>
+          <h2 class="mt-14 text-2xl font-bold tracking-tight text-slate-900">
+            {group.n}. {group.title}
+          </h2>
+          {group.blurb && (
+            <p class="mt-2 max-w-3xl text-sm text-slate-600" set:html={group.blurb} />
+          )}
+
+          <section class="mt-6 space-y-10">
+            {group.cases.map((c) => (
+              <article id={c.id} class="rounded-2xl border border-slate-200 bg-white p-8 shadow-sm">
+                <header class="flex flex-wrap items-center gap-3">
+                  <span class="rounded-full bg-rose-100 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-rose-800">
+                    Failed 10/10
+                  </span>
+                  <span class="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                    Case {c.n}
+                  </span>
+                  <h3 class="text-2xl font-bold tracking-tight text-slate-900">{c.title}</h3>
+                  <span class="text-sm text-slate-500">· {c.family}</span>
+                </header>
+
+                <div class="mt-6 grid gap-6 lg:grid-cols-2">
+                  <div>
+                    <h4 class="text-sm font-semibold uppercase tracking-wide text-slate-500">
+                      What the test does
+                    </h4>
+                    <div class="mt-2 overflow-x-auto rounded-lg bg-slate-900 text-xs">
+                      <Code code={c.testCode} lang="ts" theme="github-dark" />
+                    </div>
+                  </div>
+
+                  <div>
+                    <h4 class="text-sm font-semibold uppercase tracking-wide text-slate-500">
+                      What Playwright sees
+                    </h4>
+                    <pre class="mt-2 overflow-x-auto rounded-lg bg-rose-50 p-4 font-mono text-xs leading-relaxed text-rose-900 ring-1 ring-rose-200">{c.failureMessage}</pre>
+                  </div>
+                </div>
+
+                <details class="group mt-6 rounded-lg bg-sky-50 p-4 ring-1 ring-sky-200">
+                  <summary class="cursor-pointer text-sm font-semibold text-sky-900">
+                    Plain-English explanation
+                    <span class="ml-1 text-xs font-normal text-sky-700 group-open:hidden">(click to expand)</span>
+                  </summary>
+                  <div class="mt-4 space-y-3 text-sm leading-relaxed text-sky-950">
+                    <div>
+                      <div class="mb-1 text-xs font-semibold uppercase tracking-wide text-sky-700">
+                        The problem
+                      </div>
+                      <p set:html={c.layman.problem} />
+                    </div>
+                    <div>
+                      <div class="mb-1 text-xs font-semibold uppercase tracking-wide text-sky-700">
+                        Why a visual / AIVA approach helps
+                      </div>
+                      <p set:html={c.layman.workaround} />
+                    </div>
+                    {c.layman.extra && (
+                      <div>
+                        <div class="mb-1 text-xs font-semibold uppercase tracking-wide text-sky-700">
+                          {c.layman.extra.heading}
+                        </div>
+                        <p set:html={c.layman.extra.html} />
+                      </div>
+                    )}
+                  </div>
+                </details>
+
+                <div class="mt-6 rounded-lg bg-amber-50 p-4 ring-1 ring-amber-200">
+                  <h4 class="text-sm font-semibold text-amber-900">Reproduce with another automation tool</h4>
+                  <p class="mt-2 text-xs text-amber-900">
+                    <span class="font-semibold uppercase tracking-wide">Target</span>
+                    <a class="ml-1 break-all font-mono underline hover:text-amber-700" href={c.repro.url} target="_blank" rel="noopener">
+                      {c.repro.url}
+                    </a>
+                  </p>
+                  <p class="mt-3 text-sm text-amber-950">
+                    <span class="font-semibold">Goal —</span> {c.repro.goal}
+                  </p>
+                  <ol class="mt-3 list-decimal space-y-1.5 pl-5 text-sm text-amber-950 marker:font-semibold marker:text-amber-700">
+                    {c.repro.steps.map((s) => (
+                      <li set:html={s} />
+                    ))}
+                  </ol>
+                  <p class="mt-3 text-sm text-amber-950">
+                    <span class="font-semibold">Expected —</span>
+                    <span set:html={c.repro.expected} />
+                  </p>
+                </div>
+
+                {c.id === 'bot-detection' && (
+                  <div class="mt-6 flex flex-wrap gap-3 text-sm">
+                    <a
+                      href="/report"
+                      class="rounded-md border border-slate-300 bg-white px-3 py-1.5 font-medium text-slate-700 hover:bg-slate-50"
+                    >
+                      See full Bot Arena report →
+                    </a>
+                  </div>
+                )}
+              </article>
+            ))}
+          </section>
+        </>
+      ))}
+
+      <section class="mt-16 rounded-2xl border border-emerald-200 bg-emerald-50 p-8 shadow-sm">
+        <h2 class="text-xl font-bold tracking-tight text-emerald-900">
+          Counter-example: where pure Playwright works fine
+        </h2>
+        <p class="mt-3 max-w-3xl text-sm text-emerald-900">
+          The split is not "rich UIs are unscriptable". It's about whether the rendered content lives in the DOM. The same bar-chart reading test that fails on Chart.js and ECharts <strong>passes 10/10</strong> on Highcharts and on a Mermaid flowchart — because both render to SVG with real <code>&lt;text&gt;</code> nodes.
+        </p>
+        <pre class="mt-4 overflow-x-auto rounded-lg bg-emerald-100 p-4 font-mono text-xs leading-relaxed text-emerald-900 ring-1 ring-emerald-300">{`// Highcharts SVG bar chart — same assertion, passes:
+await expect(page.getByText('Wednesday').first()).toBeVisible();  // ✓
+await expect(page.getByText('60').first()).toBeVisible();         // ✓`}</pre>
+        <p class="mt-3 max-w-3xl text-sm text-emerald-900">
+          Visual / AIVA is the right tool for the canvas / WebGL / bot-protected / media-content / timing-fragile cases above — and the wrong tool when a fast, deterministic, DOM-based assertion already works.
+        </p>
+      </section>
+
+      <section class="mt-12 rounded-2xl border border-slate-200 bg-white p-8 shadow-sm">
+        <h2 class="text-xl font-bold tracking-tight text-slate-900">
+          Where this leaves a visual-first / AIVA approach
+        </h2>
+        <p class="mt-3 max-w-3xl text-sm text-slate-700">
+          The eight cases above sort cleanly into four root causes — each of which has a natural counterpart in a visual-driven session running a real headed Chrome through VNC.
+        </p>
+        <ul class="mt-4 space-y-3 text-sm text-slate-700">
+          <li><strong class="text-slate-900">Canvas / WebGL opacity.</strong> Screenshot + OCR / vision model reads what the user sees, instead of the DOM only the framework sees.</li>
+          <li><strong class="text-slate-900">Automation fingerprinting.</strong> A real headed Chrome session passes every detection in the Bot Arena report — none of the signals fire when the browser is not under CDP control.</li>
+          <li><strong class="text-slate-900">Media content.</strong> Frame capture + vision describes the actual visible content of a video, stream, or shared screen.</li>
+          <li><strong class="text-slate-900">UI timing &amp; selector fragility.</strong> OS-level mouse and keyboard input runs at human cadence and addresses the screen by visible label, surviving DOM rewrites and per-tenant configuration drift.</li>
+        </ul>
+        <p class="mt-4 max-w-3xl text-sm text-slate-700">
+          Playwright remains the right tool when the contract is DOM-on-DOM. The cases above are where its contract ends.
+        </p>
+      </section>
+
+      <footer class="mt-16 border-t border-slate-200 pt-6 text-center text-xs text-slate-500">
+        Each spec rerun 10× to distinguish stable failure from flake. Source repo: <code>playwright-enterprise-demos</code>.
+      </footer>
+    </main>
+  </body>
+</html>

@@ -4,7 +4,6 @@ import LoginForm from '../../components/LoginForm.astro';
 
 const measured = `
 - <code>navigator.webdriver</code> — must be <code>false</code> or undefined.
-- <code>window.chrome.runtime</code> — present in real Chrome.
 - <code>navigator.plugins.length</code> — non-zero in real Chrome.
 - <code>navigator.languages</code> — non-empty.
 - <code>User-Agent</code> — does not contain <code>HeadlessChrome</code>.
@@ -14,7 +13,7 @@ const measured = `
 <LevelLayout
   levelNumber={1}
   title="The honest tell"
-  summary="Six passive flags that real Chrome sets and most automation contexts get wrong."
+  summary="Five passive flags that real Chrome sets and most automation contexts get wrong."
   measured={measured}
 >
   <LoginForm />

@@ -3,6 +3,8 @@ import LevelLayout from '../../components/LevelLayout.astro';
 import LoginForm from '../../components/LoginForm.astro';
 
 const measured = `
+<p><em>CDP stands for <strong>Chrome DevTools Protocol</strong> — the low-level remote-control interface Chrome exposes for tools like Puppeteer and Playwright. It is how those tools click buttons, type text, and read the DOM from outside the browser, without using a real keyboard and mouse.</em></p>
+<br />
 - <strong>Driver-shim properties</strong> — legacy Selenium / stealth plugins leak <code>cdc_*</code> globals.
 - <strong>Function.prototype.toString integrity</strong> — if a framework patches toString to hide itself, the patch's own toString string is not "[native code]".
 - <strong>window.chrome surface</strong> — real Chrome exposes <code>chrome.app</code> and <code>chrome.csi</code>; CDP-only contexts typically miss them.

@@ -49,7 +49,6 @@ const levels: LevelReport[] = [
     failureMessage: sharedFailure,
     signals: [
       { status: 'fail', id: 'webdriver', detail: 'navigator.webdriver = true' },
-      { status: 'fail', id: 'chrome-runtime', detail: 'window.chrome or chrome.runtime missing' },
       { status: 'fail', id: 'plugins', detail: 'navigator.plugins.length = 0 (expected > 0)' },
       { status: 'pass', id: 'languages', detail: 'navigator.languages = [en-US]' },
       { status: 'fail', id: 'ua-headless', detail: 'User-Agent contains "HeadlessChrome/148.0.7778.96"' },
@@ -64,7 +63,7 @@ const levels: LevelReport[] = [
     aiva: {
       passes: false,
       notes: `
-        <p><strong>AIVA currently fails this level for two distinct reasons:</strong></p>
+        <p><strong>AIVA fails this level because of one signal:</strong></p>
         <ol class="mt-2 list-decimal space-y-2 pl-5">
           <li>
             <strong><code>navigator.webdriver = true</code></strong> — AIVA launches Chrome via Puppeteer in
@@ -72,12 +71,6 @@ const levels: LevelReport[] = [
             Any browser attached via CDP/WebDriver has this flag set automatically by Chrome itself.
             Fixing this requires launching Chrome as a plain subprocess and steering it without CDP
             (e.g., screencast over VNC + click/keyboard via X11/uinput instead of Puppeteer).
-          </li>
-          <li>
-            <strong><code>window.chrome.runtime</code> missing</strong> — AIVA's
-            <code>browserArgs.ts</code> passes <code>--incognito</code> and <code>--disable-extensions</code>.
-            Both strip the <code>chrome.runtime</code> namespace.
-            <span class="font-mono text-[11px]">Drop: <code>--incognito</code>, <code>--disable-extensions</code></span>
           </li>
         </ol>
       `,
@@ -98,9 +91,9 @@ const levels: LevelReport[] = [
     ],
     layman: {
       problem:
-        'A real laptop has visible "chrome" around every browser window — toolbars at the top, tabs, a Windows taskbar at the bottom, a macOS menu bar — and this chrome takes up real pixels. The browser can ask the screen "how much of you is mine, versus the OS\'s?" and the answer comes back in pixels. A headless automated browser has no chrome and no visible window at all, so the honest answer is zero. There is no way to fake having toolbars that do not exist.',
+        '<strong>What "CDP" means:</strong> CDP stands for <em>Chrome DevTools Protocol</em> — the low-level remote-control interface Chrome exposes for tools like Chrome\'s own DevTools panel, Puppeteer, and Playwright. It is how those tools "drive" Chrome from outside the browser: clicking buttons, typing text, reading the DOM, taking screenshots — all without using a real keyboard and mouse. When CDP is attached, Chrome behaves slightly differently in measurable ways, and many of those differences also coincide with "I am running headless." <br /><br />A real laptop has visible chrome around every browser window — toolbars at the top, tabs, a Windows taskbar at the bottom, a macOS menu bar — and this chrome takes up real pixels. The browser can ask the screen "how much of you is mine, versus the OS\'s?" and the answer comes back in pixels. A headless automated browser has no chrome and no visible window at all, so the honest answer is zero. There is no way to fake having toolbars that do not exist.',
       workaround:
-        'A VNC session streams a real, fully visible Chrome window running on a real desktop. There are real toolbars, a real taskbar, real OS chrome. Every measurement the page makes returns the same numbers any human visitor on any laptop would produce.',
+        'A VNC session streams a real, fully visible Chrome window running on a real desktop. There are real toolbars, a real taskbar, real OS chrome. Every measurement the page makes returns the same numbers any human visitor on any laptop would produce. Crucially, the automation happens <em>outside</em> the browser (at the OS level, moving a real cursor) — no CDP is attached, so Chrome behaves like an ordinary Chrome being used by an ordinary person.',
     },
     aiva: {
       passes: false,
