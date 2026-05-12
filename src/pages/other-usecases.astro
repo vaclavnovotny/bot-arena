@@ -20,6 +20,11 @@ interface UseCase {
     steps: string[];
     expected: string;
   };
+  snapshot?: {
+    src: string;
+    alt: string;
+    caption: string;
+  };
 }
 
 interface Group {
@@ -178,6 +183,12 @@ Received: 13`,
             'This is the same family of detections Bot Arena demonstrates — <code>navigator.webdriver</code>, missing <code>chrome.runtime</code>, <code>HeadlessChrome</code> in the user agent, software-only WebGL renderer, and so on. Public test pages like sannysoft and CreepJS list them out openly: thirteen of them fail for plain Playwright. The same arithmetic plays out silently inside Cloudflare, Akamai or PerimeterX in front of real customer portals.',
           workaround:
             'A VNC-driven real Chrome <em>is</em> a real Chrome — none of the thirteen flags fire because the browser is not under automation control from the inside. <a class="underline" href="/report">The Bot Arena failure report</a> shows this on five layered scenarios.',
+        },
+        snapshot: {
+          src: '/sannysoft-failures.png',
+          alt: 'Live screenshot of bot.sannysoft.com taken against Playwright-driven Chromium, showing twelve detection cells highlighted red ("failed") and one highlighted yellow ("warn") across the two test tables.',
+          caption:
+            'Captured against headless Chromium driven by <code class="rounded bg-white px-1 py-0.5">@playwright/test</code>: <strong class="text-rose-700">12 failed</strong> + <strong class="text-amber-700">1 warn</strong> = 13 detection cells lit up. The same browser opened by a human on a desktop shows none of these.',
         },
         repro: {
           url: 'https://bot.sannysoft.com/',
@@ -496,6 +507,26 @@ const distinctGaps = groups.length;
                     )}
                   </div>
                 </details>
+
+                {c.snapshot && (
+                  <figure class="mt-6 rounded-lg border border-slate-200 bg-slate-50 p-4 shadow-inner">
+                    <figcaption class="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                      Live snapshot — what Playwright actually faces
+                    </figcaption>
+                    <a href={c.snapshot.src} target="_blank" rel="noopener" class="block">
+                      <img
+                        src={c.snapshot.src}
+                        alt={c.snapshot.alt}
+                        class="mx-auto block max-h-[640px] w-auto max-w-full rounded ring-1 ring-slate-200 object-contain"
+                        loading="lazy"
+                      />
+                    </a>
+                    <p class="mt-3 text-center text-xs text-slate-600" set:html={c.snapshot.caption} />
+                    <p class="mt-1 text-center text-xs text-slate-500">
+                      <a class="underline hover:text-slate-700" href={c.snapshot.src} target="_blank" rel="noopener">Open full size →</a>
+                    </p>
+                  </figure>
+                )}
 
                 <div class="mt-6 rounded-lg bg-amber-50 p-4 ring-1 ring-amber-200">
                   <h4 class="text-sm font-semibold text-amber-900">Reproduce with another automation tool</h4>
