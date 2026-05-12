@@ -1,6 +1,6 @@
 # Bot Arena
 
-A public demo site at [jhero.app](https://jhero.app) that showcases five layered anti-bot detections firing in real time as browser automation interacts with the page. Built as a sales-demo asset for the AIVA automation product.
+A public demo site at [bot-arena.jhero.app](https://bot-arena.jhero.app) that showcases five layered anti-bot detections firing in real time as browser automation interacts with the page. Built as a sales-demo asset for the AIVA automation product.
 
 ## What it demonstrates
 

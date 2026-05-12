@@ -9,7 +9,7 @@ export default defineConfig({
   // Disable automatic Cloudflare KV session binding — sessions are not used in this project.
   session: { driver: 'null' },
   integrations: [preact()],
-  site: 'https://jhero.app',
+  site: 'https://bot-arena.jhero.app',
   vite: {
     plugins: [tailwindcss()],
   },
