@@ -501,10 +501,18 @@ await expect(frame.getByText('Access granted')).toBeVisible();</pre>
       `,
     },
     aiva: {
-      passes: true,
+      passes: false,
+      fixes: [
+        {
+          difficulty: 1,
+          label: 'Trivial — enable cross-origin iframes in AIVA launch config',
+          tags: ['Browser config', 'No code change'],
+          estimate: 'Minutes',
+        },
+      ],
       notes: `
-        <p><strong>AIVA passes this level natively.</strong> AIVA's screenshot includes the iframe contents because the browser composites them into the page exactly like any other element. The image-recognition pipeline sees one form, finds the inputs visually, clicks and types. Frame boundaries do not exist at the pixel level.</p>
-        <p class="mt-2">This is a major real-world advantage. Payment flows (Stripe, Adyen, Braintree), embedded auth (Auth0, Okta, WorkOS), and most "embedded SDK" patterns ship as iframes — usually cross-origin. Vision-based automation handles them by construction; selector-based testing handles them only after significant per-frame rewrites, and not at all when the frames are cross-origin.</p>
+        <p><strong>AIVA currently fails this level — but only because its embedded Chrome blocks cross-origin iframes via its launch configuration.</strong> Once cross-origin iframes are allowed in the browser config, the iframe renders normally and AIVA reads the form pixels just like any other page region. The architectural advantage is intact; only a launch-time flag stands in the way.</p>
+        <p class="mt-2">After the flag flips, this is a major real-world advantage. Payment flows (Stripe, Adyen, Braintree), embedded auth (Auth0, Okta, WorkOS), and most "embedded SDK" patterns ship as iframes — usually cross-origin. Vision-based automation handles them by construction; selector-based testing handles them only after significant per-frame rewrites, and not at all when the frames are cross-origin.</p>
       `,
     },
   },
@@ -540,10 +548,18 @@ await expect(frame.getByText('Access granted')).toBeVisible();</pre>
       `,
     },
     aiva: {
-      passes: true,
+      passes: false,
+      fixes: [
+        {
+          difficulty: 3,
+          label: 'Moderate — add drag-and-drop primitive to AIVA',
+          tags: ['New interaction primitive', 'Code change'],
+          estimate: 'Days of work',
+        },
+      ],
       notes: `
-        <p><strong>AIVA passes this level natively.</strong> The drag gesture is exactly the kind of interaction AIVA is built to do: identify the target visually, dispatch an OS-level mouse drag at the right coordinates with a realistic trajectory. The slider sees real movement events from a real cursor and unlocks.</p>
-        <p class="mt-2">As a category, drag-aligned CAPTCHAs are the bread and butter of Chinese-market anti-bot defence and increasingly common globally. Every vision-based automation pipeline handles them; every selector-based test pipeline does not.</p>
+        <p><strong>AIVA currently fails this level because it does not yet have a drag-and-drop interaction primitive.</strong> Vision recognition of the target zone is already covered by the existing screenshot pipeline; what is missing is the ability to dispatch a sustained mouse-down → mousemove sequence → mouse-up gesture as a single action.</p>
+        <p class="mt-2">Adding the primitive is a moderate-sized piece of work — it touches the input-dispatch layer of the VNC control plane and needs a small UX vocabulary for "drag from X to Y at speed Z" in the recorder. Once it lands, every slider CAPTCHA (GeeTest, Alibaba, AWS WAF, Turnstile interactive) and every other drag-shaped interaction (sortable lists, signature pads, file pickers with drag-in) becomes accessible at the same time.</p>
       `,
     },
   },
