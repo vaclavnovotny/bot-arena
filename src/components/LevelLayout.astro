@@ -1,0 +1,119 @@
+---
+import '../styles/global.css';
+import { DetectionLog } from './DetectionLog';
+
+interface Props {
+  levelNumber: 1 | 2 | 3 | 4 | 5;
+  title: string;
+  summary: string;
+  measured: string; // plain-language "what's measured" content
+}
+
+const { levelNumber, title, summary, measured } = Astro.props;
+const prev = levelNumber > 1 ? `/level/${levelNumber - 1}` : '/';
+const next = levelNumber < 5 ? `/level/${levelNumber + 1}` : '/about';
+const nextLabel = levelNumber < 5 ? `Level ${levelNumber + 1} →` : 'About →';
+---
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Level {levelNumber} — {title} · Bot Arena</title>
+    <script is:inline>
+      // Bus must exist before any detection script runs.
+      (function () {
+        const target = new EventTarget();
+        let log = [];
+        window.__bus = {
+          emit(e) {
+            const full = Object.assign({}, e, { ts: performance.now() });
+            log.push(full);
+            target.dispatchEvent(new CustomEvent('detection', { detail: full }));
+          },
+          on(h) {
+            const l = (ev) => h(ev.detail);
+            target.addEventListener('detection', l);
+            return () => target.removeEventListener('detection', l);
+          },
+          onReset(h) {
+            const l = () => h();
+            target.addEventListener('reset', l);
+            return () => target.removeEventListener('reset', l);
+          },
+          reset() {
+            log = [];
+            target.dispatchEvent(new Event('reset'));
+          },
+          snapshot() {
+            return log.slice();
+          },
+        };
+      })();
+    </script>
+  </head>
+  <body class="min-h-screen bg-slate-50 text-slate-900">
+    <header class="border-b border-slate-200 bg-white">
+      <div class="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
+        <a href="/" class="text-lg font-semibold tracking-tight">
+          🛡️ Bot Arena
+        </a>
+        <nav class="flex gap-4 text-sm text-slate-600">
+          <a href="/" class="hover:text-slate-900">Home</a>
+          <a href="/about" class="hover:text-slate-900">About</a>
+        </nav>
+      </div>
+    </header>
+
+    <main class="mx-auto flex max-w-6xl gap-8 px-6 py-10">
+      <section class="flex-1">
+        <div class="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-500">
+          Level {levelNumber} of 5
+        </div>
+        <h1 class="text-3xl font-bold tracking-tight">{title}</h1>
+        <p class="mt-2 max-w-2xl text-slate-600">{summary}</p>
+
+        <details class="mt-4 max-w-2xl rounded-lg bg-white p-4 text-sm shadow-sm">
+          <summary class="cursor-pointer font-medium text-slate-700">
+            What's measured on this page
+          </summary>
+          <div class="mt-3 whitespace-pre-line text-slate-600" set:html={measured} />
+        </details>
+
+        <div class="mt-8">
+          <slot />
+        </div>
+
+        <div class="mt-8 flex items-center gap-3">
+          <button
+            id="reset-btn"
+            type="button"
+            class="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+          >
+            Reset demo
+          </button>
+        </div>
+
+        <nav class="mt-12 flex justify-between text-sm">
+          <a href={prev} class="text-slate-500 hover:text-slate-900">← Back</a>
+          <a href={next} class="text-slate-500 hover:text-slate-900">{nextLabel}</a>
+        </nav>
+      </section>
+
+      <DetectionLog client:load />
+    </main>
+
+    <script is:inline>
+      document.getElementById('reset-btn')?.addEventListener('click', () => {
+        window.__bus.reset();
+        document.querySelectorAll('form').forEach((f) => f.reset());
+        document.querySelectorAll('[data-arena-state]').forEach((el) => {
+          el.removeAttribute('data-arena-state');
+        });
+        // Re-run any registered rerun hooks (each level's detection module can register one).
+        if (window.__rerun) window.__rerun();
+      });
+    </script>
+
+    <slot name="scripts" />
+  </body>
+</html>
