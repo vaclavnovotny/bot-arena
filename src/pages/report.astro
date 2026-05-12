@@ -84,22 +84,22 @@ const levels: LevelReport[] = [
     aiva: {
       passes: false,
       fix: {
-        difficulty: 5,
-        label: 'Architectural',
-        tags: ['Replace Puppeteer', 'Rewrite control plane', 'Code change (large)'],
-        estimate: 'Multi-week refactor',
+        difficulty: 1,
+        label: 'Trivial with an init script',
+        tags: ['5-line patch in browser.ts', 'No architectural change'],
+        estimate: '~30 minutes (vibe-codable in one prompt)',
       },
       notes: `
-        <p><strong>AIVA fails this level because of one signal:</strong></p>
-        <ol class="mt-2 list-decimal space-y-2 pl-5">
-          <li>
-            <strong><code>navigator.webdriver = true</code></strong> — AIVA launches Chrome via Puppeteer in
-            <code>aiva-node/src/control-server/src/browser.ts:204</code> (<code>puppeteer.launch({...})</code>).
-            Any browser attached via CDP/WebDriver has this flag set automatically by Chrome itself.
-            Fixing this requires launching Chrome as a plain subprocess and steering it without CDP
-            (e.g., screencast over VNC + click/keyboard via X11/uinput instead of Puppeteer).
-          </li>
-        </ol>
+        <p><strong>AIVA fails this level because of one signal: <code>navigator.webdriver = true</code>.</strong> AIVA launches Chrome via Puppeteer in <code>aiva-node/src/control-server/src/browser.ts:204</code> (<code>puppeteer.launch({...})</code>), and any browser attached via CDP has this flag set automatically by Chrome itself.</p>
+        <p class="mt-3"><strong>The pragmatic fix is a single init script.</strong> Add this to AIVA's page-setup flow (e.g., next to the existing <code>hideCursorScript</code> wiring):</p>
+        <pre class="mt-2 overflow-x-auto rounded bg-slate-900 p-3 font-mono text-[11px] leading-relaxed text-slate-100">await page.evaluateOnNewDocument(() =&gt; {
+  Object.defineProperty(navigator, 'webdriver', {
+    get: () =&gt; undefined,
+    configurable: true,
+  });
+});</pre>
+        <p class="mt-3">Bot Arena's L1 check is literally <code>navigator.webdriver === true</code> → FAIL. Returning <code>undefined</code> makes the check pass. This is exactly what every stealth plugin does (<code>puppeteer-extra-plugin-stealth</code>, <code>playwright-extra-stealth</code>, etc.). The original "multi-week refactor" estimate was for the architecturally pure fix — replacing Puppeteer/CDP entirely with a non-CDP control plane. That's the right answer if you need to pass sophisticated bot-detection vendors that fingerprint the <em>shape</em> of <code>navigator.webdriver</code> (own vs prototype descriptor, getter behaviour, etc.). For Bot Arena and most "naive equality check" detection layers, the 5-line patch is sufficient.</p>
+        <p class="mt-3"><strong>Trade-off:</strong> the init-script patch is detectable by sites that audit property descriptors. If AIVA's target customers operate sites with enterprise-grade detection, the architectural path becomes the right long-term investment. For this demo and a wide class of real-world cases, the patch is the right answer today.</p>
       `,
     },
   },
@@ -335,6 +335,7 @@ const levelData = levels.map((lvl) => ({
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <title>Playwright Failure Report — Bot Arena</title>
     <meta
       name="description"
