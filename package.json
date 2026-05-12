@@ -19,6 +19,7 @@
   "license": "ISC",
   "description": "",
   "devDependencies": {
+    "@astrojs/check": "^0.9.9",
     "@types/node": "^25.7.0",
     "happy-dom": "^20.9.0",
     "typescript": "^6.0.3",
