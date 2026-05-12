@@ -1,0 +1,254 @@
+---
+import '../styles/global.css';
+import { Code } from 'astro:components';
+
+interface Signal {
+  status: 'fail' | 'pass' | 'info';
+  id: string;
+  detail: string;
+}
+
+interface LevelReport {
+  n: number;
+  title: string;
+  family: string;
+  testCode: string;
+  failureMessage: string;
+  signals: Signal[];
+}
+
+const sharedTest = (n: number) => `test('Level ${n} sign in', async ({ page }) => {
+  await page.goto('/level/${n}/');
+  await page.getByLabel('Email').fill('user@example.com');
+  await page.getByLabel('Password').fill('hunter2');
+  await page.getByRole('button', { name: 'Sign in' }).click();
+  await expect(page.getByText('Access granted')).toBeVisible();
+});`;
+
+const sharedFailure = `Error: expect(locator).toBeVisible() failed
+
+Locator:  getByText('Access granted')
+Expected: visible
+Received: hidden
+Timeout:  5000ms`;
+
+const levels: LevelReport[] = [
+  {
+    n: 1,
+    title: 'The honest tell',
+    family: 'Passive webdriver flags',
+    testCode: sharedTest(1),
+    failureMessage: sharedFailure,
+    signals: [
+      { status: 'fail', id: 'webdriver', detail: 'navigator.webdriver = true' },
+      { status: 'fail', id: 'chrome-runtime', detail: 'window.chrome or chrome.runtime missing' },
+      { status: 'fail', id: 'plugins', detail: 'navigator.plugins.length = 0 (expected > 0)' },
+      { status: 'pass', id: 'languages', detail: 'navigator.languages = [en-US]' },
+      { status: 'fail', id: 'ua-headless', detail: 'User-Agent contains "HeadlessChrome/148.0.7778.96"' },
+      { status: 'pass', id: 'notif-permission', detail: 'Notification.permission and permissions.query agreed' },
+    ],
+  },
+  {
+    n: 2,
+    title: 'CDP attached',
+    family: 'Headless / CDP-only tells',
+    testCode: sharedTest(2),
+    failureMessage: sharedFailure,
+    signals: [
+      { status: 'pass', id: 'driver-shims', detail: 'no cdc_* globals (Playwright is not Selenium)' },
+      { status: 'pass', id: 'tostring-integrity', detail: 'Function.prototype.toString is native' },
+      { status: 'fail', id: 'chrome-surface', detail: 'window.chrome.app and chrome.csi both missing (app=false, csi=false)' },
+      { status: 'fail', id: 'browser-chrome-height', detail: 'outerHeight - innerHeight = 0px (no toolbars/tabs visible)' },
+      { status: 'fail', id: 'screen-taskbar', detail: 'screen.availHeight = screen.height = 720 (no taskbar reserved)' },
+    ],
+  },
+  {
+    n: 3,
+    title: 'Mouse trajectory',
+    family: 'Behavioural — mouse path and keystroke cadence',
+    testCode: sharedTest(3),
+    failureMessage: sharedFailure,
+    signals: [
+      { status: 'info', id: 'level3-armed', detail: 'recorder armed at page load' },
+      { status: 'fail', id: 'mouse-trajectory', detail: 'only 1 mousemove point recorded between load and click (need ≥5 for a human-shaped curve)' },
+      { status: 'pass', id: 'keystroke-cadence', detail: '0 keystrokes — page.fill() bypasses key events, so this check abstains' },
+    ],
+  },
+  {
+    n: 4,
+    title: 'Fingerprint battery',
+    family: 'Canvas, audio, WebGL renderer, font set',
+    testCode: sharedTest(4),
+    failureMessage: sharedFailure,
+    signals: [
+      { status: 'fail', id: 'webgl-renderer', detail: 'WebGL renderer = "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device …))" — software rasteriser, no GPU' },
+      { status: 'pass', id: 'canvas-fp', detail: 'sha256 = f66453e0… (not on denylist — denylist is empty in v1)' },
+      { status: 'pass', id: 'audio-fp', detail: 'sha256 = 543fb8e0… (not on denylist — denylist is empty in v1)' },
+      { status: 'pass', id: 'font-probe', detail: 'Segoe UI Emoji, Arial Black, Comic Sans MS — UA-consistent for the Windows runner' },
+    ],
+  },
+  {
+    n: 5,
+    title: 'Cloudflare Turnstile',
+    family: 'Real third-party challenge',
+    testCode: sharedTest(5),
+    failureMessage: sharedFailure,
+    signals: [
+      { status: 'fail', id: 'turnstile', detail: 'no token — widget did not solve. Cloudflare refused to issue a token for the automated browser; server-side siteverify never called.' },
+    ],
+  },
+];
+
+const totalFails = levels.reduce((acc, l) => acc + l.signals.filter((s) => s.status === 'fail').length, 0);
+---
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Playwright Failure Report — Bot Arena</title>
+    <meta
+      name="description"
+      content="A visual breakdown of what stock Playwright tries to do at each level of Bot Arena and exactly which detection signals make it fail."
+    />
+  </head>
+  <body class="min-h-screen bg-slate-50 text-slate-900">
+    <header class="border-b border-slate-200 bg-white">
+      <div class="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
+        <a href="/" class="text-lg font-semibold tracking-tight">🛡️ Bot Arena</a>
+        <nav class="flex gap-4 text-sm text-slate-600">
+          <a href="/" class="hover:text-slate-900">Home</a>
+          <a href="/about" class="hover:text-slate-900">About</a>
+          <a href="https://github.com/vaclavnovotny/bot-arena" class="hover:text-slate-900">GitHub</a>
+        </nav>
+      </div>
+    </header>
+
+    <main class="mx-auto max-w-5xl px-6 py-12">
+      <p class="text-xs font-semibold uppercase tracking-widest text-slate-500">Failure report</p>
+      <h1 class="mt-2 text-4xl font-bold tracking-tight">Playwright vs Bot Arena</h1>
+      <p class="mt-4 max-w-3xl text-lg text-slate-600">
+        Five plain Playwright tests, one per level. Each one tries to sign in. Every test fails. Below — what each test does, the error Playwright surfaces, and the detection signals that caused the failure.
+      </p>
+
+      <div class="mt-8 grid gap-3 sm:grid-cols-3">
+        <div class="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+          <div class="text-xs font-semibold uppercase tracking-wide text-slate-500">Tests run</div>
+          <div class="mt-1 text-3xl font-bold tracking-tight text-slate-900">5</div>
+        </div>
+        <div class="rounded-xl border border-rose-200 bg-rose-50 p-5 shadow-sm">
+          <div class="text-xs font-semibold uppercase tracking-wide text-rose-700">Failed</div>
+          <div class="mt-1 text-3xl font-bold tracking-tight text-rose-900">5</div>
+        </div>
+        <div class="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+          <div class="text-xs font-semibold uppercase tracking-wide text-slate-500">Detections that caught it</div>
+          <div class="mt-1 text-3xl font-bold tracking-tight text-slate-900">{totalFails}</div>
+        </div>
+      </div>
+
+      <p class="mt-8 max-w-3xl text-sm text-slate-500">
+        Headless Chromium driven by <code class="rounded bg-slate-100 px-1 py-0.5">@playwright/test</code> running against <a class="underline hover:text-slate-900" href="https://bot-arena.jhero.app">bot-arena.jhero.app</a>. Source: <a class="underline hover:text-slate-900" href="https://github.com/vaclavnovotny/bot-arena/blob/main/playwright/levels.spec.ts">playwright/levels.spec.ts</a>.
+      </p>
+
+      <section class="mt-12 space-y-10">
+        {levels.map((lvl) => (
+          <article id={`level-${lvl.n}`} class="rounded-2xl border border-slate-200 bg-white p-8 shadow-sm">
+            <header class="flex flex-wrap items-center gap-3">
+              <span class="rounded-full bg-rose-100 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-rose-800">
+                Failed
+              </span>
+              <span class="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                Level {lvl.n}
+              </span>
+              <h2 class="text-2xl font-bold tracking-tight text-slate-900">{lvl.title}</h2>
+              <span class="text-sm text-slate-500">· {lvl.family}</span>
+            </header>
+
+            <div class="mt-6 grid gap-6 lg:grid-cols-2">
+              <div>
+                <h3 class="text-sm font-semibold uppercase tracking-wide text-slate-500">
+                  What the test does
+                </h3>
+                <div class="mt-2 overflow-x-auto rounded-lg bg-slate-900 text-xs">
+                  <Code code={lvl.testCode} lang="ts" theme="github-dark" />
+                </div>
+              </div>
+
+              <div>
+                <h3 class="text-sm font-semibold uppercase tracking-wide text-slate-500">
+                  What Playwright sees
+                </h3>
+                <pre class="mt-2 overflow-x-auto rounded-lg bg-rose-50 p-4 font-mono text-xs leading-relaxed text-rose-900 ring-1 ring-rose-200">{lvl.failureMessage}</pre>
+              </div>
+            </div>
+
+            <div class="mt-6">
+              <h3 class="text-sm font-semibold uppercase tracking-wide text-slate-500">
+                Why it failed — Detection Log
+              </h3>
+              <ul class="mt-3 space-y-2">
+                {lvl.signals.map((s) => {
+                  const badge =
+                    s.status === 'fail'
+                      ? 'bg-rose-600 text-white'
+                      : s.status === 'pass'
+                      ? 'bg-emerald-600 text-white'
+                      : 'bg-slate-500 text-white';
+                  return (
+                    <li class="flex items-start gap-3 rounded-lg bg-slate-50 px-3 py-2 ring-1 ring-slate-100">
+                      <span class={`mt-0.5 inline-block rounded px-2 py-0.5 font-mono text-[10px] font-semibold uppercase tracking-wide ${badge}`}>
+                        {s.status}
+                      </span>
+                      <span class="font-mono text-xs text-slate-800">
+                        <span class="font-semibold">{s.id}</span>
+                        <span class="text-slate-500"> — {s.detail}</span>
+                      </span>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+
+            <div class="mt-6 flex flex-wrap gap-3 text-sm">
+              <a
+                href={`/level/${lvl.n}/`}
+                class="rounded-md border border-slate-300 bg-white px-3 py-1.5 font-medium text-slate-700 hover:bg-slate-50"
+              >
+                Visit Level {lvl.n} →
+              </a>
+              {lvl.n > 1 && (
+                <a
+                  href={`#level-${lvl.n - 1}`}
+                  class="rounded-md border border-slate-300 bg-white px-3 py-1.5 font-medium text-slate-500 hover:bg-slate-50"
+                >
+                  ↑ Previous
+                </a>
+              )}
+              {lvl.n < 5 && (
+                <a
+                  href={`#level-${lvl.n + 1}`}
+                  class="rounded-md border border-slate-300 bg-white px-3 py-1.5 font-medium text-slate-500 hover:bg-slate-50"
+                >
+                  Next ↓
+                </a>
+              )}
+            </div>
+          </article>
+        ))}
+      </section>
+
+      <section class="mt-16 rounded-2xl border border-emerald-200 bg-emerald-50 p-8 shadow-sm">
+        <h2 class="text-xl font-bold tracking-tight text-emerald-900">What changes with VNC AIVA</h2>
+        <p class="mt-3 max-w-3xl text-sm text-emerald-900">
+          Point the same five tests at the classic AIVA — a real headed Chrome on a Linux host, clicked through VNC at the OS level instead of CDP. None of the signals above fire. Every test passes. The form shows <strong>✓ Access granted</strong> on every level.
+        </p>
+        <p class="mt-3 max-w-3xl text-sm text-emerald-900">
+          The difference is not patches, plugins, or stealth tricks. It's that VNC-AIVA <em>is</em> a real browser session, driven by real OS-level input.
+        </p>
+      </section>
+
+      <footer class="mt-16 border-t border-slate-200 pt-6 text-center text-xs text-slate-500">
+        Static report generated on 2026-05-12 against bot-arena commit <code>c22e2ac</code>. Re-run with <code class="rounded bg-slate-100 px-1 py-0.5">npx playwright test</code>.
+      </footer>
+    </main>
+  </body>
+</html>

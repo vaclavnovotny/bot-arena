@@ -21,6 +21,7 @@ const levels = [
       <div class="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
         <a href="/" class="text-lg font-semibold tracking-tight">🛡️ Bot Arena</a>
         <nav class="flex gap-4 text-sm text-slate-600">
+          <a href="/report" class="hover:text-slate-900">Failure report</a>
           <a href="/about" class="hover:text-slate-900">About</a>
           <a href="https://github.com/vaclavnovotny/bot-arena" class="hover:text-slate-900">GitHub</a>
         </nav>
@@ -36,12 +37,20 @@ const levels = [
         Point your favourite browser-automation tool at any level. The Detection Log on the right shows, in real time, exactly which signals you tripped.
       </p>
 
-      <a
-        href="/level/1"
-        class="mt-8 inline-block rounded-lg bg-slate-900 px-6 py-3 text-sm font-semibold text-white hover:bg-slate-800"
-      >
-        Start at Level 1 →
-      </a>
+      <div class="mt-8 flex flex-wrap gap-3">
+        <a
+          href="/level/1"
+          class="inline-block rounded-lg bg-slate-900 px-6 py-3 text-sm font-semibold text-white hover:bg-slate-800"
+        >
+          Start at Level 1 →
+        </a>
+        <a
+          href="/report"
+          class="inline-block rounded-lg border border-slate-300 bg-white px-6 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+        >
+          See the Playwright failure report
+        </a>
+      </div>
 
       <ol class="mt-14 grid gap-4 sm:grid-cols-2">
         {levels.map((l) => (
