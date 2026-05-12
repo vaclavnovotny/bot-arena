@@ -15,6 +15,10 @@ interface LevelReport {
   testCode: string;
   failureMessage: string;
   signals: Signal[];
+  layman: {
+    problem: string;
+    workaround: string;
+  };
 }
 
 const sharedTest = (n: number) => `test('Level ${n} sign in', async ({ page }) => {
@@ -47,6 +51,12 @@ const levels: LevelReport[] = [
       { status: 'fail', id: 'ua-headless', detail: 'User-Agent contains "HeadlessChrome/148.0.7778.96"' },
       { status: 'pass', id: 'notif-permission', detail: 'Notification.permission and permissions.query agreed' },
     ],
+    layman: {
+      problem:
+        'Browsers volunteer a lot about themselves to every site they visit — what version they are, what extensions are loaded, whether they are being controlled by an automation program. When Playwright drives a browser, the browser honestly admits "I am being automated" through a flag called <code>navigator.webdriver</code> that any site can read in a single line of JavaScript. Stock Playwright also has no plugins installed, no notification permissions set, and identifies itself as "HeadlessChrome" in its version string. Each of these is a yes/no question a site can ask in milliseconds.',
+      workaround:
+        'The browser inside a VNC session is a regular, fully-fledged Chrome that a regular user started. Nothing is automating it from the inside — the automation happens <em>outside</em> the browser, at the operating-system level, by moving a mouse and pressing keys on a remote desktop. The browser does not know it is being driven, so none of these flags get set, and it reports back the same values any real human visitor would.',
+    },
   },
   {
     n: 2,
@@ -61,6 +71,12 @@ const levels: LevelReport[] = [
       { status: 'fail', id: 'browser-chrome-height', detail: 'outerHeight - innerHeight = 0px (no toolbars/tabs visible)' },
       { status: 'fail', id: 'screen-taskbar', detail: 'screen.availHeight = screen.height = 720 (no taskbar reserved)' },
     ],
+    layman: {
+      problem:
+        'A real laptop has visible "chrome" around every browser window — toolbars at the top, tabs, a Windows taskbar at the bottom, a macOS menu bar — and this chrome takes up real pixels. The browser can ask the screen "how much of you is mine, versus the OS\'s?" and the answer comes back in pixels. A headless automated browser has no chrome and no visible window at all, so the honest answer is zero. There is no way to fake having toolbars that do not exist.',
+      workaround:
+        'A VNC session streams a real, fully visible Chrome window running on a real desktop. There are real toolbars, a real taskbar, real OS chrome. Every measurement the page makes returns the same numbers any human visitor on any laptop would produce.',
+    },
   },
   {
     n: 3,
@@ -73,6 +89,12 @@ const levels: LevelReport[] = [
       { status: 'fail', id: 'mouse-trajectory', detail: 'only 1 mousemove point recorded between load and click (need ≥5 for a human-shaped curve)' },
       { status: 'pass', id: 'keystroke-cadence', detail: '0 keystrokes — page.fill() bypasses key events, so this check abstains' },
     ],
+    layman: {
+      problem:
+        'When a human clicks a button on a web page, the mouse pointer travels there — left a bit, up a bit, curving naturally. That path leaves a trail of dozens of "I moved here" events along the way. Playwright does not do that. When you tell Playwright "click this button," the pointer instantly appears at the button\'s exact pixel and clicks. No travel, no curve. A page that records every mouse event notices that this click came out of nowhere — no human operates a computer like that.',
+      workaround:
+        'A VNC operator moves a real mouse cursor on a real operating system, generating the same continuous stream of mouse events any human would. Because the path is a <em>physical</em> movement (the cursor is dragged across the screen by a person or by image-recognition automation steering it), it has the same natural variation and curvature as any other user\'s.',
+    },
   },
   {
     n: 4,
@@ -86,6 +108,12 @@ const levels: LevelReport[] = [
       { status: 'pass', id: 'audio-fp', detail: 'sha256 = 543fb8e0… (not on denylist — denylist is empty in v1)' },
       { status: 'pass', id: 'font-probe', detail: 'Segoe UI Emoji, Arial Black, Comic Sans MS — UA-consistent for the Windows runner' },
     ],
+    layman: {
+      problem:
+        'Real computers have real graphics cards from real manufacturers (Intel, NVIDIA, AMD), and each draws images and text in subtly different but characteristic ways. Real computers also have real font files installed by the operating system. Headless automated browsers have neither — they use a software-only graphics stack called <code>SwiftShader</code> that produces an obviously-different visual fingerprint, and they ship with a stripped-down set of fonts. A page can render a tiny invisible test image and hash the pixels; that single hash is usually enough to tell whether the browser is running on real silicon or a CI runner.',
+      workaround:
+        'A VNC session runs on a real machine with a real graphics stack and a real set of fonts. The fingerprints it produces match those of millions of other real desktop Chrome installations.',
+    },
   },
   {
     n: 5,
@@ -96,6 +124,12 @@ const levels: LevelReport[] = [
     signals: [
       { status: 'fail', id: 'turnstile', detail: 'no token — widget did not solve. Cloudflare refused to issue a token for the automated browser; server-side siteverify never called.' },
     ],
+    layman: {
+      problem:
+        'Cloudflare Turnstile is the modern, invisible replacement for "click all the bicycle pictures" CAPTCHAs. When a page asks for it, Turnstile silently runs all the kinds of checks the previous four levels illustrate — plus an additional stack of private signals only Cloudflare knows about — and decides whether the visitor looks human enough to be issued a one-time "yes, this is a human" token. For automated browsers it simply refuses to issue the token. The server-side login check then sees no token and rejects the submission before it ever reaches the application code.',
+      workaround:
+        'A real Chrome session with a real fingerprint, real interaction history, and real mouse movement looks like any other paying customer to Turnstile. The token gets issued silently, exactly the same way it would for someone working from a coffee-shop laptop.',
+    },
   },
 ];
 
@@ -180,6 +214,27 @@ const totalFails = levels.reduce((acc, l) => acc + l.signals.filter((s) => s.sta
                 <pre class="mt-2 overflow-x-auto rounded-lg bg-rose-50 p-4 font-mono text-xs leading-relaxed text-rose-900 ring-1 ring-rose-200">{lvl.failureMessage}</pre>
               </div>
             </div>
+
+            <details class="group mt-6 rounded-lg bg-sky-50 p-4 ring-1 ring-sky-200">
+              <summary class="cursor-pointer text-sm font-semibold text-sky-900">
+                Plain-English explanation
+                <span class="ml-1 text-xs font-normal text-sky-700 group-open:hidden">(click to expand)</span>
+              </summary>
+              <div class="mt-4 space-y-3 text-sm leading-relaxed text-sky-950">
+                <div>
+                  <div class="mb-1 text-xs font-semibold uppercase tracking-wide text-sky-700">
+                    The problem
+                  </div>
+                  <p set:html={lvl.layman.problem} />
+                </div>
+                <div>
+                  <div class="mb-1 text-xs font-semibold uppercase tracking-wide text-sky-700">
+                    Why a VNC-driven real browser passes
+                  </div>
+                  <p set:html={lvl.layman.workaround} />
+                </div>
+              </div>
+            </details>
 
             <div class="mt-6">
               <h3 class="text-sm font-semibold uppercase tracking-wide text-slate-500">
