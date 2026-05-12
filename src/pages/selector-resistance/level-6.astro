@@ -9,26 +9,43 @@ const measured = `
 - A vision-based automation tool reads "Email" off the image via OCR and clicks the input directly below it.
 `;
 
-const usedBy: Array<{ name: string; note: string }> = [
+interface AppEntry {
+  name: string;
+  note: string;
+  marketShare?: string;
+  users?: string;
+}
+
+const usedBy: AppEntry[] = [
   {
     name: 'Bank PIN keypads',
     note: 'Many banks render the numeric PIN entry pad entirely as images, with shuffled digit positions per session, specifically to defeat keyloggers and DOM-based scrapers.',
+    marketShare: 'Standard on most BR + IN retail-bank login flows',
+    users: 'Hundreds of millions of online banking customers (Itaú, Bradesco, HDFC, SBI, ICICI…)',
   },
   {
     name: 'Older banking and brokerage portals',
     note: 'Banks across Brazil, India, and parts of EU traditionally render account-number labels and field prompts as inline images to make automation harder.',
+    marketShare: 'Common in Tier-1 retail banking back-offices',
+    users: 'Tens of millions of brokerage and treasury-portal users',
   },
   {
     name: 'Anti-scraping news and listings sites',
     note: 'Some pricing pages and classifieds (real-estate, used-car, recruitment) render key text as images so the prices/details cannot be scraped without OCR.',
+    marketShare: 'Common pattern on regional classifieds + paywalled news',
+    users: 'Reaches millions of property/auto/jobs visitors monthly',
   },
   {
     name: 'Legacy enterprise CRM and ERP screens',
     note: 'Older Oracle Forms / PeopleSoft / Siebel webifications used static label images bundled with the page. Each release ships a new image set.',
+    marketShare: 'Oracle Apps still ~12% of ERP market; large legacy install base',
+    users: 'Oracle EBS ~70K customers; PeopleSoft ~6K; Siebel ~4K — each touches large internal user bases',
   },
   {
     name: 'CAPTCHA prompt text itself',
     note: 'Many CAPTCHA implementations render even the instruction ("Click on the bicycles") as an image, not as DOM text, to prevent scripts from reading the prompt.',
+    marketShare: 'reCAPTCHA ~60% of CAPTCHA market; hCaptcha + Turnstile growing fast',
+    users: 'reCAPTCHA on 13M+ websites; hCaptcha protects ~250K+ sites',
   },
 ];
 
@@ -101,11 +118,32 @@ const svgSignInButton = svgLabel('Sign in', { bold: true, fill: 'white' });
     <ul class="mt-3 grid gap-2 text-sm">
       {usedBy.map((app) => (
         <li class="rounded-lg border border-slate-200 bg-white p-3 shadow-sm">
-          <span class="font-semibold text-slate-900">{app.name}</span>
-          <span class="text-slate-600"> — <span set:html={app.note} /></span>
+          <div>
+            <span class="font-semibold text-slate-900">{app.name}</span>
+            <span class="text-slate-600"> — <span set:html={app.note} /></span>
+          </div>
+          {(app.marketShare || app.users) && (
+            <div class="mt-2 flex flex-wrap gap-1.5 text-[11px]">
+              {app.marketShare && (
+                <span class="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5 text-slate-700">
+                  <span class="font-semibold uppercase tracking-wide text-slate-500">Market</span>
+                  <span>{app.marketShare}</span>
+                </span>
+              )}
+              {app.users && (
+                <span class="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5 text-slate-700">
+                  <span class="font-semibold uppercase tracking-wide text-slate-500">Users</span>
+                  <span>{app.users}</span>
+                </span>
+              )}
+            </div>
+          )}
         </li>
       ))}
     </ul>
+    <p class="mt-3 text-[11px] text-slate-400">
+      Figures are approximate / company-disclosed (~2024–2025). Sources: company filings, industry reports (Gartner, IDC, BuiltWith, npm stats), and public DAU disclosures.
+    </p>
   </section>
 </LevelLayout>
 

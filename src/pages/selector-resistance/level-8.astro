@@ -9,26 +9,43 @@ const measured = `
 - A vision-based automation tool scrolls the list, recognises the target row when it scrolls into view, and clicks. The scroll-and-recognise loop is a primitive every visual automation pipeline already has.
 `;
 
-const usedBy: Array<{ name: string; note: string }> = [
+interface AppEntry {
+  name: string;
+  note: string;
+  marketShare?: string;
+  users?: string;
+}
+
+const usedBy: AppEntry[] = [
   {
     name: 'TanStack Virtual / react-window / react-virtual',
     note: 'The default tool for performant lists in React. Used inside Linear, Plaid, Vercel dashboards, Coinbase, and hundreds of other production SaaS apps.',
+    marketShare: 'Default React virtualisation choice (~80% of new projects)',
+    users: 'react-window ~1M weekly npm downloads; TanStack Virtual ~500K weekly',
   },
   {
     name: 'AG Grid, MUI X DataGrid, ReactTable',
     note: 'Enterprise data-grid libraries virtualise both rows and columns. Selectors for off-screen cells return nothing until the grid is scrolled.',
+    marketShare: 'AG Grid claims used by all top-30 banks and ~90% of Fortune 500',
+    users: 'AG Grid ~300K+ developers; MUI X 50K+ paying customers; ReactTable ~1.5M weekly npm downloads',
   },
   {
     name: 'Slack message list, Discord channel scrollback',
     note: 'Long chat histories are virtualised. Tests that try to find a message from yesterday must scroll until it materialises.',
+    marketShare: 'Slack ~35% of team-chat market; Discord dominates gaming/community chat',
+    users: 'Slack ~35M+ daily; Discord ~200M+ monthly active',
   },
   {
     name: 'Notion databases, Coda tables, Airtable grids',
     note: 'Database views virtualise rows. Hidden rows are not in the DOM; they are not in the accessibility tree either.',
+    marketShare: 'Airtable leads no-code databases; Notion leads workspace docs',
+    users: 'Notion 100M+ users; Airtable 450K+ orgs; Coda ~100K orgs',
   },
   {
     name: "Gmail's thread list, Outlook Web message pane",
     note: 'Email clients virtualise the inbox view at scale. Selecting a specific thread by selector is the canonical Playwright pain point in Gmail-clone tests.',
+    marketShare: 'Gmail ~30% of consumer email; Outlook ~17% (still leads in enterprise)',
+    users: 'Gmail 1.8B+ users; Outlook ~400M users',
   },
 ];
 
@@ -104,11 +121,32 @@ const usersJson = JSON.stringify(users);
     <ul class="mt-3 grid gap-2 text-sm">
       {usedBy.map((app) => (
         <li class="rounded-lg border border-slate-200 bg-white p-3 shadow-sm">
-          <span class="font-semibold text-slate-900">{app.name}</span>
-          <span class="text-slate-600"> — <span set:html={app.note} /></span>
+          <div>
+            <span class="font-semibold text-slate-900">{app.name}</span>
+            <span class="text-slate-600"> — <span set:html={app.note} /></span>
+          </div>
+          {(app.marketShare || app.users) && (
+            <div class="mt-2 flex flex-wrap gap-1.5 text-[11px]">
+              {app.marketShare && (
+                <span class="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5 text-slate-700">
+                  <span class="font-semibold uppercase tracking-wide text-slate-500">Market</span>
+                  <span>{app.marketShare}</span>
+                </span>
+              )}
+              {app.users && (
+                <span class="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5 text-slate-700">
+                  <span class="font-semibold uppercase tracking-wide text-slate-500">Users</span>
+                  <span>{app.users}</span>
+                </span>
+              )}
+            </div>
+          )}
         </li>
       ))}
     </ul>
+    <p class="mt-3 text-[11px] text-slate-400">
+      Figures are approximate / company-disclosed (~2024–2025). Sources: company filings, industry reports (Gartner, IDC, BuiltWith, npm stats), and public DAU disclosures.
+    </p>
   </section>
 </LevelLayout>
 
