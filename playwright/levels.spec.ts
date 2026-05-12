@@ -15,10 +15,7 @@ async function readLog(page: Page): Promise<DetectionEvent[]> {
 }
 
 function reportEvents(level: number, events: DetectionEvent[]): void {
-  // Print to stderr via stdout (Playwright list reporter preserves console output).
-  // Format: indented block under the test title for readability.
-  const lines: string[] = [];
-  lines.push(`\n      --- Level ${level} Detection Log ---`);
+  const lines: string[] = [`\n      --- Level ${level} Detection Log ---`];
   for (const e of events) {
     const tag = e.status.toUpperCase().padEnd(4);
     const detail = e.detail ? ` — ${e.detail}` : '';
@@ -32,96 +29,74 @@ function reportEvents(level: number, events: DetectionEvent[]): void {
   console.log(lines.join('\n'));
 }
 
-test.describe('bot-arena — Playwright should be caught at every level', () => {
-  test('Level 1 — passive webdriver flags', async ({ page }) => {
+async function waitForEventCount(page: Page, n: number, timeoutMs = 15_000): Promise<void> {
+  await page.waitForFunction(
+    (count) =>
+      (window as unknown as { __bus?: { snapshot: () => unknown[] } }).__bus?.snapshot().length! >= count,
+    n,
+    { timeout: timeoutMs }
+  );
+}
+
+async function attemptSignIn(page: Page): Promise<void> {
+  await page.locator('input[name="email"]').fill('bot@example.com');
+  await page.locator('input[name="password"]').fill('hunter2');
+  await page.locator('button[type="submit"]').click();
+}
+
+async function assertBlocked(page: Page): Promise<void> {
+  const form = page.locator('form[data-arena-form]');
+  await expect(form, 'form should reach data-arena-state="blocked"').toHaveAttribute(
+    'data-arena-state',
+    'blocked',
+    { timeout: 15_000 }
+  );
+  await expect(
+    form.locator('[data-arena-blocked]'),
+    'visible "✗ Blocked — bot detected" message should appear'
+  ).toBeVisible();
+}
+
+test.describe('bot-arena — Playwright tries to sign in and gets blocked at every level', () => {
+  test('Level 1 — sign in attempt is blocked by passive webdriver flags', async ({ page }) => {
     await page.goto('/level/1/');
-    await page.waitForFunction(
-      () => (window as unknown as { __bus?: { snapshot: () => unknown[] } }).__bus?.snapshot().length! >= 5,
-      null,
-      { timeout: 10_000 }
-    );
-    const events = await readLog(page);
-    reportEvents(1, events);
-    const fails = events.filter((e) => e.status === 'fail');
-    expect(fails.length, 'Level 1 should have at least one FAIL signal when run by Playwright').toBeGreaterThan(0);
+    await waitForEventCount(page, 6); // six passive checks complete on page load
+    await attemptSignIn(page);
+    await assertBlocked(page);
+    reportEvents(1, await readLog(page));
   });
 
-  test('Level 2 — CDP attachment probes', async ({ page }) => {
+  test('Level 2 — sign in attempt is blocked by CDP / headless tells', async ({ page }) => {
     await page.goto('/level/2/');
-    await page.waitForFunction(
-      () => (window as unknown as { __bus?: { snapshot: () => unknown[] } }).__bus?.snapshot().length! >= 4,
-      null,
-      { timeout: 10_000 }
-    );
-    const events = await readLog(page);
-    reportEvents(2, events);
-    const fails = events.filter((e) => e.status === 'fail');
-    expect(fails.length, 'Level 2 should have at least one FAIL signal when run by Playwright').toBeGreaterThan(0);
+    await waitForEventCount(page, 5); // five Level-2 probes complete on page load
+    await attemptSignIn(page);
+    await assertBlocked(page);
+    reportEvents(2, await readLog(page));
   });
 
-  test('Level 3 — mouse trajectory + keystroke cadence', async ({ page }) => {
+  test('Level 3 — sign in attempt is blocked by mouse trajectory scoring', async ({ page }) => {
     await page.goto('/level/3/');
-    // Stock Playwright click: jumps to coords with no intermediate mousemoves.
-    await page.locator('input[name="email"]').click();
-    await page.locator('input[name="email"]').fill('test@example.com');
-    await page.locator('input[name="password"]').fill('hunter2');
-    await page.locator('button[type="submit"]').click();
-    await page.waitForFunction(
-      () =>
-        (window as unknown as { __bus?: { snapshot: () => DetectionEvent[] } })
-          .__bus?.snapshot()
-          .some((e) => e.id === 'mouse-trajectory'),
-      null,
-      { timeout: 10_000 }
-    );
-    const events = await readLog(page);
-    reportEvents(3, events);
-    const trajectoryFail = events.find((e) => e.id === 'mouse-trajectory');
-    expect(
-      trajectoryFail?.status,
-      'Mouse trajectory should FAIL — stock page.click() has no intermediate moves'
-    ).toBe('fail');
+    await waitForEventCount(page, 1); // wait for the "trajectory recorder armed" info event
+    await attemptSignIn(page);
+    await assertBlocked(page);
+    reportEvents(3, await readLog(page));
   });
 
-  test('Level 4 — fingerprint battery (canvas, audio, WebGL, fonts)', async ({ page }) => {
+  test('Level 4 — sign in attempt is blocked by fingerprint signals', async ({ page }) => {
     await page.goto('/level/4/');
-    await page.waitForFunction(
-      () => (window as unknown as { __bus?: { snapshot: () => unknown[] } }).__bus?.snapshot().length! >= 4,
-      null,
-      { timeout: 15_000 }
-    );
-    const events = await readLog(page);
-    reportEvents(4, events);
-    const fails = events.filter((e) => e.status === 'fail');
-    // Note: canvas/audio denylists are empty in v1, so this will likely only catch
-    // WebGL renderer (SwiftShader) and the font probe. Still expect ≥1 FAIL on headless.
-    expect(
-      fails.length,
-      'Level 4 should catch at least the WebGL renderer (SwiftShader) on headless Chromium'
-    ).toBeGreaterThan(0);
+    await waitForEventCount(page, 4); // canvas/audio/webgl/font checks
+    await attemptSignIn(page);
+    await assertBlocked(page);
+    reportEvents(4, await readLog(page));
   });
 
-  test('Level 5 — Cloudflare Turnstile', async ({ page }) => {
+  test('Level 5 — sign in attempt is blocked by Cloudflare Turnstile', async ({ page }) => {
     await page.goto('/level/5/');
-    // Give the Turnstile widget a chance to either auto-solve (it won't, for Playwright)
-    // or fail-callback. We're not solving it manually — that's the point of the level.
-    await page.waitForTimeout(6000);
-    await page.locator('input[name="email"]').fill('test@example.com');
-    await page.locator('input[name="password"]').fill('hunter2');
-    await page.locator('button[type="submit"]').click();
-    await page.waitForFunction(
-      () =>
-        (window as unknown as { __bus?: { snapshot: () => DetectionEvent[] } })
-          .__bus?.snapshot()
-          .some((e) => e.id === 'turnstile'),
-      null,
-      { timeout: 15_000 }
-    );
-    const events = await readLog(page);
-    reportEvents(5, events);
-    const turnstile = events.find((e) => e.id === 'turnstile');
-    expect(turnstile?.status, 'Turnstile verification should FAIL for Playwright (no token / siteverify fail)').toBe(
-      'fail'
-    );
+    // Give Turnstile a few seconds to either issue a token (it won't, for Playwright)
+    // or render its interactive challenge. We're not solving anything manually.
+    await page.waitForTimeout(5_000);
+    await attemptSignIn(page);
+    await assertBlocked(page);
+    reportEvents(5, await readLog(page));
   });
 });
