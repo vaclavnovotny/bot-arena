@@ -3,16 +3,17 @@ import LevelLayout from '../../components/LevelLayout.astro';
 import LoginForm from '../../components/LoginForm.astro';
 
 const measured = `
-- <strong>Driver-shim properties</strong> — legacy Selenium leaves <code>cdc_*</code> globals; a free win.
+- <strong>Driver-shim properties</strong> — legacy Selenium / stealth plugins leak <code>cdc_*</code> globals.
 - <strong>Function.prototype.toString integrity</strong> — if a framework patches toString to hide itself, the patch's own toString string is not "[native code]".
-- <strong>Error.stack timing</strong> — accessing a getter that materialises an Error stack is measurably slower when CDP / DevTools is attached.
-- <strong>console.debug hijack</strong> — DevTools/CDP probes argument values; we pass a getter and see whether it fires.
+- <strong>window.chrome surface</strong> — real Chrome exposes <code>chrome.app</code> and <code>chrome.csi</code>; CDP-only contexts typically miss them.
+- <strong>Browser chrome height</strong> — visible toolbars and tabs make <code>outerHeight - innerHeight</code> meaningfully positive; headless Chrome reports 0.
+- <strong>Screen taskbar</strong> — real desktops reserve pixels for the taskbar/dock so <code>screen.availHeight &lt; screen.height</code>; headless reports them equal.
 `;
 ---
 <LevelLayout
   levelNumber={2}
   title="CDP attached"
-  summary="Four checks for a debugger, automation framework, or driver shim being active."
+  summary="Five checks for stealth-tool artefacts plus signals only real headed Chrome can fake."
   measured={measured}
 >
   <LoginForm />
