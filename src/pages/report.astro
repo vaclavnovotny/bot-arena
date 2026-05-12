@@ -19,6 +19,10 @@ interface LevelReport {
     problem: string;
     workaround: string;
   };
+  aiva: {
+    passes: boolean;
+    notes: string; // HTML allowed
+  };
 }
 
 const sharedTest = (n: number) => `test('Level ${n} sign in', async ({ page }) => {
@@ -57,6 +61,27 @@ const levels: LevelReport[] = [
       workaround:
         'The browser inside a VNC session is a regular, fully-fledged Chrome that a regular user started. Nothing is automating it from the inside — the automation happens <em>outside</em> the browser, at the operating-system level, by moving a mouse and pressing keys on a remote desktop. The browser does not know it is being driven, so none of these flags get set, and it reports back the same values any real human visitor would.',
     },
+    aiva: {
+      passes: false,
+      notes: `
+        <p><strong>AIVA currently fails this level for two distinct reasons:</strong></p>
+        <ol class="mt-2 list-decimal space-y-2 pl-5">
+          <li>
+            <strong><code>navigator.webdriver = true</code></strong> — AIVA launches Chrome via Puppeteer in
+            <code>aiva-node/src/control-server/src/browser.ts:204</code> (<code>puppeteer.launch({...})</code>).
+            Any browser attached via CDP/WebDriver has this flag set automatically by Chrome itself.
+            Fixing this requires launching Chrome as a plain subprocess and steering it without CDP
+            (e.g., screencast over VNC + click/keyboard via X11/uinput instead of Puppeteer).
+          </li>
+          <li>
+            <strong><code>window.chrome.runtime</code> missing</strong> — AIVA's
+            <code>browserArgs.ts</code> passes <code>--incognito</code> and <code>--disable-extensions</code>.
+            Both strip the <code>chrome.runtime</code> namespace.
+            <span class="font-mono text-[11px]">Drop: <code>--incognito</code>, <code>--disable-extensions</code></span>
+          </li>
+        </ol>
+      `,
+    },
   },
   {
     n: 2,
@@ -77,6 +102,28 @@ const levels: LevelReport[] = [
       workaround:
         'A VNC session streams a real, fully visible Chrome window running on a real desktop. There are real toolbars, a real taskbar, real OS chrome. Every measurement the page makes returns the same numbers any human visitor on any laptop would produce.',
     },
+    aiva: {
+      passes: false,
+      notes: `
+        <p><strong>AIVA currently fails this level for two reasons:</strong></p>
+        <ol class="mt-2 list-decimal space-y-2 pl-5">
+          <li>
+            <strong>No visible browser chrome</strong> — AIVA's
+            <code>browserArgs.ts</code> passes both <code>--start-fullscreen</code> and <code>--kiosk</code>.
+            Both flags hide the toolbars, tabs, and address bar that any real Chrome window displays.
+            With them dropped, <code>outerHeight - innerHeight</code> jumps from 0 px to the usual 80–120 px.
+            <span class="font-mono text-[11px]">Drop: <code>--start-fullscreen</code>, <code>--kiosk</code></span>
+          </li>
+          <li>
+            <strong>No taskbar</strong> — this one is outside Chrome's launch flags. AIVA's VNC session
+            (Xvfb/Xvnc) has no window manager or desktop panel reserving screen pixels, so the X server
+            reports <code>screen.availHeight === screen.height</code>. Adding a lightweight desktop
+            environment to the AIVA image — XFCE, LXDE, or even just OpenBox + tint2 — with a panel/dock
+            visible at the bottom of the screen would close this gap.
+          </li>
+        </ol>
+      `,
+    },
   },
   {
     n: 3,
@@ -94,6 +141,12 @@ const levels: LevelReport[] = [
         'When a human clicks a button on a web page, the mouse pointer travels there — left a bit, up a bit, curving naturally. That path leaves a trail of dozens of "I moved here" events along the way. Playwright does not do that. When you tell Playwright "click this button," the pointer instantly appears at the button\'s exact pixel and clicks. No travel, no curve. A page that records every mouse event notices that this click came out of nowhere — no human operates a computer like that.',
       workaround:
         'A VNC operator moves a real mouse cursor on a real operating system, generating the same continuous stream of mouse events any human would. Because the path is a <em>physical</em> movement (the cursor is dragged across the screen by a person or by image-recognition automation steering it), it has the same natural variation and curvature as any other user\'s.',
+    },
+    aiva: {
+      passes: true,
+      notes: `
+        <p><strong>AIVA passes this level natively.</strong> The mouse cursor in AIVA's VNC session moves continuously across the screen at the OS level — exactly like any human user dragging a real mouse. No code or config change is needed here; this is one of the levels where running on a real machine wins by construction.</p>
+      `,
     },
   },
   {
@@ -114,6 +167,13 @@ const levels: LevelReport[] = [
       workaround:
         'A VNC session runs on a real machine with a real graphics stack and a real set of fonts. The fingerprints it produces match those of millions of other real desktop Chrome installations.',
     },
+    aiva: {
+      passes: true,
+      notes: `
+        <p><strong>AIVA passes this level — but partially by accident.</strong> AIVA's <code>browserArgs.ts</code> includes <code>--disable-gpu</code>, <code>--disable-webgl</code>, and <code>--disable-features=Vulkan,webgpu</code>, which make the WebGL renderer query return nothing. Bot Arena reports an empty renderer as <code>INFO</code> rather than <code>FAIL</code>, so AIVA slips past. Canvas, audio, and font fingerprints come from a real Linux Chrome on a real machine and look like any other desktop user.</p>
+        <p class="mt-2"><strong>Latent risk:</strong> if Bot Arena's canvas/audio denylists in <code>src/detections/level4.ts</code> were populated with hashes harvested from AIVA's Chrome (which is the operational follow-up flagged in the implementation plan), this level would fail for AIVA too. Long-term, AIVA should consider whether <code>--disable-gpu</code>/<code>--disable-webgl</code> are still needed — they're a tell to fingerprint-aware sites because most real Chromes do have GPU.</p>
+      `,
+    },
   },
   {
     n: 5,
@@ -129,6 +189,21 @@ const levels: LevelReport[] = [
         'Cloudflare Turnstile is the modern, invisible replacement for "click all the bicycle pictures" CAPTCHAs. When a page asks for it, Turnstile silently runs all the kinds of checks the previous four levels illustrate — plus an additional stack of private signals only Cloudflare knows about — and decides whether the visitor looks human enough to be issued a one-time "yes, this is a human" token. For automated browsers it simply refuses to issue the token. The server-side login check then sees no token and rejects the submission before it ever reaches the application code.',
       workaround:
         'A real Chrome session with a real fingerprint, real interaction history, and real mouse movement looks like any other paying customer to Turnstile. The token gets issued silently, exactly the same way it would for someone working from a coffee-shop laptop.',
+    },
+    aiva: {
+      passes: false,
+      notes: `
+        <p><strong>AIVA currently fails this level as a cascading consequence of L1 and L2.</strong> Cloudflare Turnstile silently runs many of the same signals — <code>navigator.webdriver</code>, browser-chrome dimensions, fingerprint plausibility — plus its own private checks, plus IP reputation. Two contributing causes inside AIVA's control:</p>
+        <ol class="mt-2 list-decimal space-y-2 pl-5">
+          <li>
+            <strong>Signal leakage from L1 and L2.</strong> Fixing the Puppeteer/CDP attachment, dropping <code>--incognito</code>/<code>--disable-extensions</code>, and dropping <code>--kiosk</code>/<code>--start-fullscreen</code> would all reduce Turnstile's confidence that the visitor is automated. Closing L1 + L2 likely moves Turnstile from "refuse / interactive challenge" to "silent pass" for many sites.
+          </li>
+          <li>
+            <strong>IP reputation.</strong> If AIVA runs on a datacenter or cloud-region IP, Turnstile downgrades by default. Running through a residential proxy or from end-user infrastructure improves the score meaningfully — and is independent of any AIVA code change.
+          </li>
+        </ol>
+        <p class="mt-2"><em>Turnstile's logic is partially closed-source, so even a perfectly-configured AIVA may occasionally fail. This level is the only one where success isn't fully under AIVA's control.</em></p>
+      `,
     },
   },
 ];
@@ -188,8 +263,17 @@ const totalFails = levels.reduce((acc, l) => acc + l.signals.filter((s) => s.sta
           <article id={`level-${lvl.n}`} class="rounded-2xl border border-slate-200 bg-white p-8 shadow-sm">
             <header class="flex flex-wrap items-center gap-3">
               <span class="rounded-full bg-rose-100 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-rose-800">
-                Failed
+                Playwright: failed
               </span>
+              {lvl.aiva.passes ? (
+                <span class="rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-emerald-800">
+                  AIVA: passes
+                </span>
+              ) : (
+                <span class="rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-amber-800">
+                  AIVA: also fails
+                </span>
+              )}
               <span class="text-xs font-semibold uppercase tracking-wide text-slate-500">
                 Level {lvl.n}
               </span>
@@ -234,6 +318,14 @@ const totalFails = levels.reduce((acc, l) => acc + l.signals.filter((s) => s.sta
                   <p set:html={lvl.layman.workaround} />
                 </div>
               </div>
+            </details>
+
+            <details class={`group mt-4 rounded-lg p-4 ring-1 ${lvl.aiva.passes ? 'bg-emerald-50 ring-emerald-200' : 'bg-amber-50 ring-amber-200'}`}>
+              <summary class={`cursor-pointer text-sm font-semibold ${lvl.aiva.passes ? 'text-emerald-900' : 'text-amber-900'}`}>
+                AIVA context — {lvl.aiva.passes ? 'why this level already passes for AIVA' : 'what would need to change in AIVA to pass this'}
+                <span class={`ml-1 text-xs font-normal group-open:hidden ${lvl.aiva.passes ? 'text-emerald-700' : 'text-amber-700'}`}>(click to expand)</span>
+              </summary>
+              <div class={`mt-4 space-y-3 text-sm leading-relaxed ${lvl.aiva.passes ? 'text-emerald-950' : 'text-amber-950'}`} set:html={lvl.aiva.notes} />
             </details>
 
             <div class="mt-6">
