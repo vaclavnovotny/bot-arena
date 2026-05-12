@@ -1,0 +1,138 @@
+---
+import LevelLayout from '../../components/LevelLayout.astro';
+
+const measured = `
+- The form has real <code>&lt;input&gt;</code> elements — but the labels for them are rendered as <strong>SVG images</strong>, not as text. There is no <code>&lt;label&gt;</code>, no <code>aria-label</code>, no <code>placeholder</code>, no <code>title</code>.
+- The image alt attributes are empty, so screen readers and accessibility-tree-based locators get nothing either.
+- The visible "Email", "Password", and "Sign in" strings are pixels — exactly like a CAPTCHA prompt where the question text is itself drawn as an image to defeat scraping.
+- A test relying on <code>page.getByLabel</code>, <code>getByText</code>, or <code>getByRole('textbox', { name })</code> finds nothing semantic to grab.
+- A vision-based automation tool reads "Email" off the image via OCR and clicks the input directly below it.
+`;
+
+const usedBy: Array<{ name: string; note: string }> = [
+  {
+    name: 'Bank PIN keypads',
+    note: 'Many banks render the numeric PIN entry pad entirely as images, with shuffled digit positions per session, specifically to defeat keyloggers and DOM-based scrapers.',
+  },
+  {
+    name: 'Older banking and brokerage portals',
+    note: 'Banks across Brazil, India, and parts of EU traditionally render account-number labels and field prompts as inline images to make automation harder.',
+  },
+  {
+    name: 'Anti-scraping news and listings sites',
+    note: 'Some pricing pages and classifieds (real-estate, used-car, recruitment) render key text as images so the prices/details cannot be scraped without OCR.',
+  },
+  {
+    name: 'Legacy enterprise CRM and ERP screens',
+    note: 'Older Oracle Forms / PeopleSoft / Siebel webifications used static label images bundled with the page. Each release ships a new image set.',
+  },
+  {
+    name: 'CAPTCHA prompt text itself',
+    note: 'Many CAPTCHA implementations render even the instruction ("Click on the bicycles") as an image, not as DOM text, to prevent scripts from reading the prompt.',
+  },
+];
+
+function svgLabel(text: string, opts: { bold?: boolean; fill?: string } = {}): string {
+  const weight = opts.bold ? 'bold' : '500';
+  const fill = opts.fill ?? '%23334155';
+  const svg = '<svg xmlns="http://www.w3.org/2000/svg" width="200" height="20"><text x="0" y="15" font-family="system-ui,sans-serif" font-size="13" font-weight="' + weight + '" fill="' + fill + '">' + text + '</text></svg>';
+  return 'data:image/svg+xml;utf8,' + encodeURIComponent(svg);
+}
+
+const svgEmail = svgLabel('Email');
+const svgPassword = svgLabel('Password');
+const svgSignInLabel = svgLabel('Sign in');
+const svgSignInButton = svgLabel('Sign in', { bold: true, fill: 'white' });
+---
+<LevelLayout
+  section="selector-resistance"
+  localN={6}
+  title="Image-only labels"
+  summary="Email and Password labels are rendered as images. No DOM text exists."
+  measured={measured}
+>
+  <form
+    id="ocr-form"
+    class="max-w-sm rounded-xl border border-slate-200 bg-white p-6 shadow-sm data-[arena-state=granted]:border-emerald-300 data-[arena-state=blocked]:border-rose-300"
+    data-arena-form
+  >
+    <img src={svgSignInLabel} alt="" style="height: 22px;" class="block" />
+    <p class="mt-1 text-xs text-slate-400">No DOM text exists on this card. Try Ctrl+F searching for "Email".</p>
+
+    <div class="mt-4">
+      <img src={svgEmail} alt="" style="height: 18px;" class="block" />
+      <input
+        type="text"
+        name="f1"
+        class="mt-1 block w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-slate-500 focus:outline-none"
+        value="user@example.com"
+      />
+    </div>
+
+    <div class="mt-3">
+      <img src={svgPassword} alt="" style="height: 18px;" class="block" />
+      <input
+        type="text"
+        name="f2"
+        class="mt-1 block w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-slate-500 focus:outline-none"
+        value="hunter2"
+      />
+    </div>
+
+    <button
+      type="submit"
+      class="mt-5 flex w-full items-center justify-center rounded-md bg-slate-900 px-3 py-2 hover:bg-slate-800"
+    >
+      <img src={svgSignInButton} alt="" style="height: 18px;" />
+    </button>
+
+    <div class="mt-4 hidden text-sm font-medium text-emerald-700" data-arena-granted>
+      ✓ Access granted
+    </div>
+    <div class="mt-4 hidden text-sm font-medium text-rose-700" data-arena-blocked>
+      ✗ Blocked
+    </div>
+  </form>
+
+  <section class="mt-10 max-w-2xl">
+    <h2 class="text-xs font-semibold uppercase tracking-widest text-slate-500">
+      Production apps using this technique
+    </h2>
+    <ul class="mt-3 grid gap-2 text-sm">
+      {usedBy.map((app) => (
+        <li class="rounded-lg border border-slate-200 bg-white p-3 shadow-sm">
+          <span class="font-semibold text-slate-900">{app.name}</span>
+          <span class="text-slate-600"> — <span set:html={app.note} /></span>
+        </li>
+      ))}
+    </ul>
+  </section>
+</LevelLayout>
+
+<script is:inline>
+  document.getElementById('ocr-form').addEventListener('submit', (ev) => {
+    ev.preventDefault();
+    const form = ev.currentTarget;
+    const inputs = form.querySelectorAll('input');
+    const ok = inputs[0].value && inputs[1].value;
+    form.setAttribute('data-arena-state', ok ? 'granted' : 'blocked');
+    form.querySelector('[data-arena-granted]').classList.toggle('hidden', !ok);
+    form.querySelector('[data-arena-blocked]').classList.toggle('hidden', ok);
+    if (window.__bus) {
+      window.__bus.emit({
+        id: 'ocr-submit',
+        name: 'Image-labelled form submitted',
+        status: ok ? 'pass' : 'fail',
+        detail: ok ? 'inputs filled' : 'inputs empty',
+      });
+    }
+  });
+  if (window.__bus) {
+    window.__bus.emit({
+      id: 'ocr-armed',
+      name: 'Image-labelled form rendered',
+      status: 'info',
+      detail: 'Every visible text on the form is an SVG image with empty alt. No DOM text node says "Email".',
+    });
+  }
+</script>

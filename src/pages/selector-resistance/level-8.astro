@@ -1,0 +1,198 @@
+---
+import LevelLayout from '../../components/LevelLayout.astro';
+
+const measured = `
+- Instead of a free-text email field, the page asks you to <strong>select your account</strong> from a list of 1,000 users.
+- The list uses <strong>virtual scrolling</strong>: only the rows currently inside the visible viewport are mounted in the DOM. Scroll up or down and the off-screen rows are recycled.
+- <code>page.getByText('user-373@example.com')</code> returns empty for rows that are not currently mounted. A test cannot find what is not in the DOM.
+- Selecting an account then unlocks the password field and Sign-in button. The standard <code>getByLabel('Email')</code> never finds anything — there is no Email field at all on this page.
+- A vision-based automation tool scrolls the list, recognises the target row when it scrolls into view, and clicks. The scroll-and-recognise loop is a primitive every visual automation pipeline already has.
+`;
+
+const usedBy: Array<{ name: string; note: string }> = [
+  {
+    name: 'TanStack Virtual / react-window / react-virtual',
+    note: 'The default tool for performant lists in React. Used inside Linear, Plaid, Vercel dashboards, Coinbase, and hundreds of other production SaaS apps.',
+  },
+  {
+    name: 'AG Grid, MUI X DataGrid, ReactTable',
+    note: 'Enterprise data-grid libraries virtualise both rows and columns. Selectors for off-screen cells return nothing until the grid is scrolled.',
+  },
+  {
+    name: 'Slack message list, Discord channel scrollback',
+    note: 'Long chat histories are virtualised. Tests that try to find a message from yesterday must scroll until it materialises.',
+  },
+  {
+    name: 'Notion databases, Coda tables, Airtable grids',
+    note: 'Database views virtualise rows. Hidden rows are not in the DOM; they are not in the accessibility tree either.',
+  },
+  {
+    name: "Gmail's thread list, Outlook Web message pane",
+    note: 'Email clients virtualise the inbox view at scale. Selecting a specific thread by selector is the canonical Playwright pain point in Gmail-clone tests.',
+  },
+];
+
+// Generate 1000 fake users at build time so the rendered HTML really does have 1000 items in the data array.
+const total = 1000;
+const users: Array<{ idx: number; email: string; name: string }> = Array.from({ length: total }, (_, i) => ({
+  idx: i,
+  email: `user-${i}@example.com`,
+  name: `User ${i}`,
+}));
+const usersJson = JSON.stringify(users);
+---
+<LevelLayout
+  section="selector-resistance"
+  localN={8}
+  title="Virtual scrolling"
+  summary="1,000 accounts, only a window's worth in the DOM. Standard selectors find nothing off-screen."
+  measured={measured}
+>
+  <div
+    class="max-w-sm rounded-xl border border-slate-200 bg-white p-6 shadow-sm data-[arena-state=granted]:border-emerald-300 data-[arena-state=blocked]:border-rose-300"
+    data-arena-form
+    id="vs-card"
+  >
+    <h2 class="text-base font-semibold text-slate-900">Select your account</h2>
+    <p class="mt-1 text-sm text-slate-500">1,000 accounts. Only the visible window exists in the DOM at any moment.</p>
+
+    <div
+      id="vs-scroller"
+      class="mt-4 h-64 overflow-y-auto rounded-md border border-slate-300"
+      style="position: relative;"
+    >
+      <div id="vs-spacer" style="position: relative; width: 100%;"></div>
+    </div>
+
+    <div id="vs-step2" class="mt-4 hidden">
+      <div class="text-sm text-slate-700">
+        Selected: <span id="vs-selected" class="font-mono text-slate-900"></span>
+      </div>
+      <label class="mt-3 block text-sm font-medium text-slate-700">
+        Password
+        <input
+          type="password"
+          id="vs-password"
+          class="mt-1 block w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-slate-500 focus:outline-none"
+          value="hunter2"
+        />
+      </label>
+      <button
+        type="button"
+        id="vs-submit"
+        class="mt-4 w-full rounded-md bg-slate-900 px-3 py-2 text-sm font-semibold text-white hover:bg-slate-800"
+      >
+        Sign in
+      </button>
+    </div>
+
+    <div class="mt-4 hidden text-sm font-medium text-emerald-700" data-arena-granted>
+      ✓ Access granted
+    </div>
+    <div class="mt-4 hidden text-sm font-medium text-rose-700" data-arena-blocked>
+      ✗ Blocked
+    </div>
+  </div>
+  <p class="mt-3 max-w-sm text-xs text-slate-500">
+    Scroll the list to find <code>user-371@example.com</code>. Playwright's <code>getByText</code> can't see rows that aren't currently mounted.
+  </p>
+
+  <section class="mt-10 max-w-2xl">
+    <h2 class="text-xs font-semibold uppercase tracking-widest text-slate-500">
+      Production apps using this technique
+    </h2>
+    <ul class="mt-3 grid gap-2 text-sm">
+      {usedBy.map((app) => (
+        <li class="rounded-lg border border-slate-200 bg-white p-3 shadow-sm">
+          <span class="font-semibold text-slate-900">{app.name}</span>
+          <span class="text-slate-600"> — <span set:html={app.note} /></span>
+        </li>
+      ))}
+    </ul>
+  </section>
+</LevelLayout>
+
+<script type="application/json" id="vs-data" set:html={usersJson} is:inline></script>
+
+<script is:inline>
+  (function () {
+    const users = JSON.parse(document.getElementById('vs-data').textContent);
+    const scroller = document.getElementById('vs-scroller');
+    const spacer = document.getElementById('vs-spacer');
+    const ROW_H = 36;
+    const VISIBLE = Math.ceil(scroller.clientHeight / ROW_H) + 2;
+    spacer.style.height = (users.length * ROW_H) + 'px';
+
+    function render() {
+      const start = Math.max(0, Math.floor(scroller.scrollTop / ROW_H) - 1);
+      const end = Math.min(users.length, start + VISIBLE);
+      // Remove existing rows
+      spacer.querySelectorAll('[data-row]').forEach((el) => el.remove());
+      for (let i = start; i < end; i++) {
+        const u = users[i];
+        const row = document.createElement('button');
+        row.type = 'button';
+        row.setAttribute('data-row', String(i));
+        row.style.position = 'absolute';
+        row.style.top = (i * ROW_H) + 'px';
+        row.style.left = '0';
+        row.style.right = '0';
+        row.style.height = ROW_H + 'px';
+        row.style.padding = '0 12px';
+        row.style.textAlign = 'left';
+        row.style.fontSize = '13px';
+        row.style.borderBottom = '1px solid #f1f5f9';
+        row.style.background = 'white';
+        row.style.cursor = 'pointer';
+        row.innerHTML = '<span style="font-weight:500;color:#0f172a">' + u.name + '</span> <span style="color:#64748b">— ' + u.email + '</span>';
+        row.addEventListener('mouseenter', () => { row.style.background = '#f8fafc'; });
+        row.addEventListener('mouseleave', () => { row.style.background = 'white'; });
+        row.addEventListener('click', () => selectUser(u));
+        spacer.appendChild(row);
+      }
+    }
+    scroller.addEventListener('scroll', render);
+    render();
+
+    let chosen = null;
+    function selectUser(u) {
+      chosen = u;
+      document.getElementById('vs-selected').textContent = u.email;
+      document.getElementById('vs-step2').classList.remove('hidden');
+      if (window.__bus) {
+        window.__bus.emit({
+          id: 'vs-selected',
+          name: 'Account selected from virtualised list',
+          status: 'pass',
+          detail: 'row ' + u.idx + ': ' + u.email,
+        });
+      }
+    }
+
+    const card = document.getElementById('vs-card');
+    document.getElementById('vs-submit').addEventListener('click', () => {
+      const pwd = document.getElementById('vs-password').value;
+      const ok = chosen && pwd;
+      card.setAttribute('data-arena-state', ok ? 'granted' : 'blocked');
+      card.querySelector('[data-arena-granted]').classList.toggle('hidden', !ok);
+      card.querySelector('[data-arena-blocked]').classList.toggle('hidden', ok);
+      if (window.__bus) {
+        window.__bus.emit({
+          id: 'vs-submit',
+          name: 'Form submitted',
+          status: ok ? 'pass' : 'fail',
+          detail: ok ? 'account selected + password set' : 'missing account or password',
+        });
+      }
+    });
+
+    if (window.__bus) {
+      window.__bus.emit({
+        id: 'vs-armed',
+        name: 'Virtualised account list rendered',
+        status: 'info',
+        detail: users.length + ' total users; only ' + VISIBLE + ' rows live in the DOM at any moment.',
+      });
+    }
+  })();
+</script>

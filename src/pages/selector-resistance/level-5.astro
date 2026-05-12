@@ -1,0 +1,234 @@
+---
+import LevelLayout from '../../components/LevelLayout.astro';
+import LoginForm from '../../components/LoginForm.astro';
+
+const measured = `
+- The page renders a real DOM form (email, password, submit). Standard locators can find them.
+- Between the password field and the submit button sits a <strong>slider CAPTCHA</strong> rendered on a <code>&lt;canvas&gt;</code>: drag the knob from the left edge to the highlighted target zone on the right to verify.
+- The target zone position is randomised on every page load, and there is no DOM hint for where it is. The page records mouse-drag events on the canvas and checks the release coordinate.
+- Submit only marks the form as Access granted if both inputs are filled <em>and</em> the slider has been solved. Otherwise it shows Blocked — verification required.
+- A vision-based automation tool sees the target zone in the rendered image, computes its X coordinate, and drags the knob there.
+`;
+
+const usedBy: Array<{ name: string; note: string }> = [
+  {
+    name: 'GeeTest, NetEase YiDun, Tencent CAPTCHA',
+    note: 'The dominant Chinese-market CAPTCHA family is a slider puzzle: drag a piece into a gap inside a randomised image. Used by Alibaba, Pinduoduo, JD.com, dozens of banks.',
+  },
+  {
+    name: 'Alibaba slider verification',
+    note: 'Taobao, Alipay, and the wider Alibaba estate use slider verification at sign-in and during sensitive transactions. The same widget gates account recovery flows.',
+  },
+  {
+    name: "Cloudflare Turnstile (interactive mode)",
+    note: 'When Turnstile decides a visitor is suspicious it can escalate to an interactive checkbox or drag challenge. Standard tests cannot solve it.',
+  },
+  {
+    name: 'AWS WAF Bot Control challenges',
+    note: 'AWS WAF can issue a drag-to-align CAPTCHA during anti-bot rule evaluation; widely deployed in front of e-commerce and banking origins.',
+  },
+  {
+    name: 'Ticketmaster, Live Nation, queue-it virtual waiting rooms',
+    note: 'High-demand ticketing platforms gate purchases with slider or drag challenges to slow down scalper bots.',
+  },
+];
+---
+<LevelLayout
+  section="selector-resistance"
+  localN={5}
+  title="Slider verification"
+  summary="Real form + a drag-to-verify slider. The target position is only visible in pixels."
+  measured={measured}
+>
+  <form
+    id="slider-form"
+    class="max-w-sm rounded-xl border border-slate-200 bg-white p-6 shadow-sm data-[arena-state=granted]:border-emerald-300 data-[arena-state=blocked]:border-rose-300"
+    data-arena-form
+  >
+    <h2 class="text-base font-semibold text-slate-900">Sign in</h2>
+    <p class="mt-1 text-sm text-slate-500">Demo target — credentials are not checked.</p>
+
+    <label class="mt-4 block text-sm font-medium text-slate-700">
+      Email
+      <input
+        type="email"
+        name="email"
+        autocomplete="email"
+        class="mt-1 block w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-slate-500 focus:outline-none"
+        value="user@example.com"
+      />
+    </label>
+
+    <label class="mt-3 block text-sm font-medium text-slate-700">
+      Password
+      <input
+        type="password"
+        name="password"
+        autocomplete="current-password"
+        class="mt-1 block w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-slate-500 focus:outline-none"
+        value="hunter2"
+      />
+    </label>
+
+    <div class="mt-4 text-sm font-medium text-slate-700">
+      Drag the knob into the green zone to verify
+      <canvas
+        id="slider-canvas"
+        width="320"
+        height="60"
+        class="mt-2 block rounded-md border border-slate-300"
+        style="width: 320px; height: 60px; touch-action: none;"
+      ></canvas>
+    </div>
+
+    <button
+      type="submit"
+      class="mt-5 w-full rounded-md bg-slate-900 px-3 py-2 text-sm font-semibold text-white hover:bg-slate-800"
+    >
+      Sign in
+    </button>
+
+    <div class="mt-4 hidden text-sm font-medium text-emerald-700" data-arena-granted>
+      ✓ Access granted
+    </div>
+    <div class="mt-4 hidden text-sm font-medium text-rose-700" data-arena-blocked>
+      ✗ Blocked — verification required
+    </div>
+  </form>
+
+  <section class="mt-10 max-w-2xl">
+    <h2 class="text-xs font-semibold uppercase tracking-widest text-slate-500">
+      Production apps using this technique
+    </h2>
+    <ul class="mt-3 grid gap-2 text-sm">
+      {usedBy.map((app) => (
+        <li class="rounded-lg border border-slate-200 bg-white p-3 shadow-sm">
+          <span class="font-semibold text-slate-900">{app.name}</span>
+          <span class="text-slate-600"> — <span set:html={app.note} /></span>
+        </li>
+      ))}
+    </ul>
+  </section>
+</LevelLayout>
+
+<script is:inline>
+  (function () {
+    const canvas = document.getElementById('slider-canvas');
+    const ctx = canvas.getContext('2d');
+    const W = canvas.width, H = canvas.height;
+    const KNOB_W = 50, KNOB_H = 40;
+    const TARGET_W = 50;
+    const targetX = Math.floor(180 + Math.random() * 80); // random target between 180-260
+    let knobX = 6;
+    let dragging = false;
+    let dragOffset = 0;
+    let verified = false;
+
+    function draw() {
+      ctx.clearRect(0, 0, W, H);
+      // track
+      ctx.fillStyle = '#f1f5f9';
+      ctx.fillRect(0, 0, W, H);
+      // target zone
+      ctx.fillStyle = verified ? '#10b981' : '#bbf7d0';
+      ctx.fillRect(targetX, (H - KNOB_H) / 2 + 4, TARGET_W, KNOB_H - 8);
+      ctx.strokeStyle = '#059669';
+      ctx.strokeRect(targetX + 0.5, (H - KNOB_H) / 2 + 4.5, TARGET_W - 1, KNOB_H - 9);
+      // knob
+      ctx.fillStyle = verified ? '#10b981' : '#0f172a';
+      ctx.fillRect(knobX, (H - KNOB_H) / 2, KNOB_W, KNOB_H);
+      ctx.fillStyle = '#ffffff';
+      ctx.font = 'bold 18px system-ui, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(verified ? '✓' : '⇨', knobX + KNOB_W / 2, H / 2 + 6);
+      ctx.textAlign = 'left';
+    }
+
+    function onDown(e) {
+      const rect = canvas.getBoundingClientRect();
+      const x = (e.clientX ?? (e.touches && e.touches[0].clientX)) - rect.left;
+      const y = (e.clientY ?? (e.touches && e.touches[0].clientY)) - rect.top;
+      if (x >= knobX && x <= knobX + KNOB_W && y >= 0 && y <= H && !verified) {
+        dragging = true;
+        dragOffset = x - knobX;
+        if (e.cancelable) e.preventDefault();
+      }
+    }
+    function onMove(e) {
+      if (!dragging) return;
+      const rect = canvas.getBoundingClientRect();
+      const x = (e.clientX ?? (e.touches && e.touches[0].clientX)) - rect.left;
+      knobX = Math.max(0, Math.min(W - KNOB_W, x - dragOffset));
+      if (e.cancelable) e.preventDefault();
+      draw();
+    }
+    function onUp() {
+      if (!dragging) return;
+      dragging = false;
+      const centerX = knobX + KNOB_W / 2;
+      const tCenter = targetX + TARGET_W / 2;
+      if (Math.abs(centerX - tCenter) < TARGET_W / 2) {
+        verified = true;
+        knobX = targetX + (TARGET_W - KNOB_W) / 2;
+        if (window.__bus) {
+          window.__bus.emit({
+            id: 'slider-verified',
+            name: 'Slider CAPTCHA solved',
+            status: 'pass',
+            detail: 'knob released within target zone',
+          });
+        }
+      } else {
+        knobX = 6;
+        if (window.__bus) {
+          window.__bus.emit({
+            id: 'slider-miss',
+            name: 'Slider released outside target',
+            status: 'fail',
+            detail: `released at x=${Math.round(centerX)}, target center x=${Math.round(tCenter)}`,
+          });
+        }
+      }
+      draw();
+    }
+    canvas.addEventListener('mousedown', onDown);
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+    canvas.addEventListener('touchstart', onDown);
+    window.addEventListener('touchmove', onMove, { passive: false });
+    window.addEventListener('touchend', onUp);
+    draw();
+
+    if (window.__bus) {
+      window.__bus.emit({
+        id: 'slider-armed',
+        name: 'Slider verification armed',
+        status: 'info',
+        detail: 'Drag the knob into the green zone. Target position is randomised per page load.',
+      });
+    }
+
+    const form = document.getElementById('slider-form');
+    form.addEventListener('submit', (ev) => {
+      ev.preventDefault();
+      const ok = verified && form.email.value && form.password.value;
+      form.setAttribute('data-arena-state', ok ? 'granted' : 'blocked');
+      form.querySelector('[data-arena-granted]').classList.toggle('hidden', !ok);
+      form.querySelector('[data-arena-blocked]').classList.toggle('hidden', ok);
+      if (window.__bus) {
+        window.__bus.emit({
+          id: 'slider-submit',
+          name: 'Form submitted',
+          status: ok ? 'pass' : 'fail',
+          detail: ok ? 'access granted (slider verified)' : (verified ? 'inputs empty' : 'slider not verified'),
+        });
+      }
+    });
+
+    window.__rerun = () => {
+      verified = false;
+      knobX = 6;
+      draw();
+    };
+  })();
+</script>

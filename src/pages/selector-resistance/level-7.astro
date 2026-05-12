@@ -1,0 +1,124 @@
+---
+import LevelLayout from '../../components/LevelLayout.astro';
+
+const measured = `
+- The form lives in an <code>&lt;iframe src="data:..."&gt;</code>. The <code>data:</code> URI scheme has an <strong>opaque origin</strong> — the iframe is treated as cross-origin to its parent page.
+- Browser security policy forbids the parent page (and Playwright running against the parent) from reading or scripting cross-origin frame content. This is the same restriction that applies to Stripe Elements, Auth0 hosted login dialogs, and the live Cloudflare Turnstile widget — all of which load their forms from a different origin than the host site.
+- <code>page.getByLabel('Email')</code> queries only the main frame. <code>page.frameLocator(...)</code> can <em>see</em> the iframe but cannot pierce a cross-origin one — Playwright explicitly refuses cross-origin frame interaction in many cases.
+- A vision-based automation tool sees the form as pixels in the rendered page. Cross-origin boundaries do not exist in the rendered image.
+`;
+
+const usedBy: Array<{ name: string; note: string }> = [
+  {
+    name: 'Stripe Elements',
+    note: 'Card number, expiry, and CVC each load from <code>js.stripe.com</code> as separate cross-origin iframes. PCI-mandated isolation; no automated DOM access possible from the host page.',
+  },
+  {
+    name: 'Cloudflare Turnstile + reCAPTCHA + hCaptcha',
+    note: 'Every modern bot-detection widget renders cross-origin. The widget code, the challenge UI, and the verdict token live in a frame from the vendor.',
+  },
+  {
+    name: 'Auth0 / Okta / Clerk embedded login',
+    note: 'The "embedded" version of hosted login pages is iframe-based, cross-origin to the SaaS host. Customers integrate via vendor SDKs because direct DOM access is forbidden.',
+  },
+  {
+    name: 'Sign in with Google / Apple, One Tap prompts',
+    note: 'Identity providers render their consent UIs in iframes from their own origin. Selectors cannot pierce them.',
+  },
+  {
+    name: 'Embedded analytics consent banners',
+    note: 'OneTrust, TrustArc, Cookiebot consent dialogs ship as cross-origin iframes so they can be governed centrally and so site code cannot tamper with consent state.',
+  },
+];
+
+// Inner HTML for the cross-origin (data:) iframe.
+const innerHtml = `<!doctype html>
+<html><head><meta charset="utf-8"><style>
+body { margin: 0; font: 14px/1.4 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+form { background: white; border: 1px solid #e2e8f0; border-radius: 12px; padding: 24px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
+h2 { font: bold 16px system-ui; margin: 0 0 4px; color: #0f172a; }
+p.lead { font: 14px system-ui; color: #64748b; margin: 0 0 16px; }
+label { display: block; font: 500 13px system-ui; color: #334155; margin-top: 12px; }
+input { display: block; width: 100%; box-sizing: border-box; border: 1px solid #cbd5e1; border-radius: 6px; padding: 8px 12px; font: 14px system-ui; margin-top: 4px; }
+input:focus { outline: none; border-color: #475569; }
+button { display: block; width: 100%; margin-top: 20px; background: #0f172a; color: white; font: bold 14px system-ui; padding: 8px 12px; border: none; border-radius: 6px; cursor: pointer; }
+button:hover { background: #1e293b; }
+.ok { color: #059669; font: 600 14px system-ui; margin-top: 16px; display: none; }
+</style></head><body>
+<form id="x-form">
+  <h2>Sign in</h2>
+  <p class="lead">Cross-origin demo target.</p>
+  <label>Email
+    <input type="email" name="email" value="user@example.com" />
+  </label>
+  <label>Password
+    <input type="password" name="password" value="hunter2" />
+  </label>
+  <button type="submit">Sign in</button>
+  <div class="ok" id="ok-msg">&#10003; Access granted</div>
+</form>
+<script>
+document.getElementById('x-form').addEventListener('submit', function (ev) {
+  ev.preventDefault();
+  document.getElementById('ok-msg').style.display = 'block';
+  try { window.parent.postMessage({ type: 'xframe-submit' }, '*'); } catch (_) {}
+});
+</script>
+</body></html>`;
+
+const dataUri = `data:text/html;charset=utf-8,${encodeURIComponent(innerHtml)}`;
+---
+<LevelLayout
+  section="selector-resistance"
+  localN={7}
+  title="Cross-origin iframe"
+  summary="Same form, loaded from a different origin. Browser security blocks all DOM access from the parent."
+  measured={measured}
+>
+  <div class="rounded-xl border border-slate-200 bg-white p-3 shadow-sm" style="width: 380px;">
+    <iframe
+      title="x-login-frame"
+      src={dataUri}
+      style="display: block; width: 360px; height: 360px; border: 0; border-radius: 6px;"
+    ></iframe>
+  </div>
+  <p class="mt-3 max-w-sm text-xs text-slate-500">
+    The form is in a <code>data:</code> URI iframe with an opaque origin — cross-origin to this page.
+    Even <code>page.frameLocator</code> hits a brick wall, just like with real Stripe / Auth0 / Turnstile widgets.
+  </p>
+
+  <section class="mt-10 max-w-2xl">
+    <h2 class="text-xs font-semibold uppercase tracking-widest text-slate-500">
+      Production apps using this technique
+    </h2>
+    <ul class="mt-3 grid gap-2 text-sm">
+      {usedBy.map((app) => (
+        <li class="rounded-lg border border-slate-200 bg-white p-3 shadow-sm">
+          <span class="font-semibold text-slate-900">{app.name}</span>
+          <span class="text-slate-600"> — <span set:html={app.note} /></span>
+        </li>
+      ))}
+    </ul>
+  </section>
+</LevelLayout>
+
+<script is:inline>
+  window.addEventListener('message', (ev) => {
+    if (ev.data && ev.data.type === 'xframe-submit' && window.__bus) {
+      window.__bus.emit({
+        id: 'xframe-submit',
+        name: 'Cross-origin iframe form submitted',
+        status: 'pass',
+        detail: 'inner frame posted submit message via postMessage',
+      });
+    }
+  });
+  if (window.__bus) {
+    window.__bus.emit({
+      id: 'xframe-armed',
+      name: 'Cross-origin (data:) iframe mounted',
+      status: 'info',
+      detail: 'Browser same-origin policy treats this iframe as a different origin from the parent.',
+    });
+  }
+</script>

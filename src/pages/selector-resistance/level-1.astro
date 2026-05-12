@@ -9,34 +9,55 @@ const measured = `
 - An image-aware automation tool (or a human) sees the form, clicks where the email box <em>looks</em> like it is, types, clicks submit. The pixels work; the DOM doesn't matter.
 `;
 
-const usedBy: Array<{ name: string; note: string }> = [
+interface AppEntry {
+  name: string;
+  note: string;
+  marketShare?: string;
+  users?: string;
+}
+
+const usedBy: AppEntry[] = [
   {
     name: 'Figma',
     note: 'The entire editing surface is a WebGL canvas — layers, frames, text, vector nodes are not in the DOM. Plugins use Figma\'s own API; outside automation has only pixels.',
+    marketShare: '~65% of UI/UX design tools',
+    users: '~4M daily, 200M+ accounts',
   },
   {
     name: 'Google Docs / Sheets / Slides',
     note: 'Switched to canvas-based rendering for the document and sheet body in 2021 ("annotated canvas"). The toolbar is DOM; everything below it is not.',
+    marketShare: 'Workspace ~50% of office suites',
+    users: '3B+ Workspace users; ~750M paid seats',
   },
   {
     name: 'Miro / FigJam / Lucidchart / tldraw / Excalidraw',
     note: 'Collaborative whiteboards render every sticky note, arrow, and shape into a canvas. Selectors find one <code>&lt;canvas&gt;</code> element no matter how many objects are on the board.',
+    marketShare: '~90% of online whiteboarding (Miro lead)',
+    users: 'Miro 90M+, Lucid 70M+, Excalidraw 17M+, FigJam ships with Figma',
   },
   {
     name: 'Citrix Workspace / Apache Guacamole / noVNC',
     note: 'Remote-desktop and VDI clients stream the whole remote screen — including the login prompt — as a single canvas. Real-world example of a "canvas-only login".',
+    marketShare: 'Citrix ~70% of enterprise VDI',
+    users: '~100M Citrix end users across 400K customer orgs',
   },
   {
     name: 'TradingView and similar charting platforms',
     note: 'Chart prices, candles, drawing tools all live on canvas. Reading "is the 200-day MA above price?" from the DOM is impossible.',
+    marketShare: 'Dominant retail trading charts; embedded by every major broker',
+    users: '90M+ monthly users (company disclosure 2024)',
   },
   {
     name: 'Photopea, Unity / Godot / Phaser WebGL builds',
     note: 'Image editors and browser games run their entire UI inside one canvas. Menu items, buttons, dialogs — none of it exists outside.',
+    marketShare: 'Unity ~70% of mobile game engines',
+    users: 'Unity 1.5M+ monthly creators; Photopea ~10M MAU',
   },
   {
     name: 'Anti-keylogger banking keypads',
     note: 'Several banks (notably across India, Brazil, parts of EU) render the numeric PIN pad on a canvas with shuffled digit positions every page load — defeats both keyloggers and selector-based scrapers.',
+    marketShare: 'Standard on most BR + IN retail-bank logins',
+    users: 'Hundreds of millions of online banking customers (Itaú, Bradesco, HDFC, SBI, ICICI…)',
   },
 ];
 ---
@@ -68,11 +89,32 @@ const usedBy: Array<{ name: string; note: string }> = [
     <ul class="mt-3 grid gap-2 text-sm">
       {usedBy.map((app) => (
         <li class="rounded-lg border border-slate-200 bg-white p-3 shadow-sm">
-          <span class="font-semibold text-slate-900">{app.name}</span>
-          <span class="text-slate-600"> — <span set:html={app.note} /></span>
+          <div>
+            <span class="font-semibold text-slate-900">{app.name}</span>
+            <span class="text-slate-600"> — <span set:html={app.note} /></span>
+          </div>
+          {(app.marketShare || app.users) && (
+            <div class="mt-2 flex flex-wrap gap-1.5 text-[11px]">
+              {app.marketShare && (
+                <span class="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5 text-slate-700">
+                  <span class="font-semibold uppercase tracking-wide text-slate-500">Market</span>
+                  <span>{app.marketShare}</span>
+                </span>
+              )}
+              {app.users && (
+                <span class="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5 text-slate-700">
+                  <span class="font-semibold uppercase tracking-wide text-slate-500">Users</span>
+                  <span>{app.users}</span>
+                </span>
+              )}
+            </div>
+          )}
         </li>
       ))}
     </ul>
+    <p class="mt-3 text-[11px] text-slate-400">
+      Figures are approximate / company-disclosed (~2024–2025). Sources: company filings, industry reports (Gartner, IDC, BuiltWith, npm stats), and public DAU disclosures.
+    </p>
   </section>
 </LevelLayout>
 

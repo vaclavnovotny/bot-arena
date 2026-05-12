@@ -8,30 +8,49 @@ const measured = `
 - A vision-based automation tool reads the visible labels and inputs off the rendered page. The DOM privacy boundary is irrelevant — the rendered pixels are public.
 `;
 
-const usedBy: Array<{ name: string; note: string }> = [
+interface AppEntry {
+  name: string;
+  note: string;
+  marketShare?: string;
+  users?: string;
+}
+
+const usedBy: AppEntry[] = [
   {
     name: 'Salesforce Lightning (LWC)',
     note: 'Lightning Web Components default to a Salesforce-managed shadow root. The entire CRM UI is built from sealed components — selectors get nowhere without Salesforce-specific tooling.',
+    marketShare: '~20% of global CRM (largest vendor)',
+    users: '150K+ customer orgs; ~300M end users',
   },
   {
     name: 'ServiceNow Workspace and Now UI components',
     note: 'ServiceNow\'s newer interfaces use Web Components with closed shadow roots. Test frameworks that ship with the platform are the only supported automation path.',
+    marketShare: '~45% of ITSM (largest in category)',
+    users: '8K+ enterprise customers; ~85% of Fortune 500',
   },
   {
     name: 'SAP UI5 and Fiori',
     note: 'Major enterprise resource planning surfaces shipped by SAP encapsulate every widget. Standard selectors fail; SAP provides its own component-aware automation API.',
+    marketShare: '~24% of ERP market (largest vendor)',
+    users: '440K+ customers; 92% of Forbes Global 2000',
   },
   {
     name: 'Polymer-based legacy apps (YouTube Studio, parts of Workspace)',
     note: 'Older Google apps use Polymer, which can configure shadow roots as closed. External automation has been a known pain point for years.',
+    marketShare: 'YouTube ~80% of online video',
+    users: 'YouTube: 2.5B+ monthly users; YouTube Studio: ~50M+ creators',
   },
   {
     name: 'Stencil-generated component libraries (Ionic, several SaaS UIs)',
     note: 'Stencil compiles to native Web Components and components can opt into closed shadows for tighter encapsulation. The pattern is widespread in enterprise design systems.',
+    marketShare: 'Ionic ~15% of hybrid-mobile framework market',
+    users: 'Ionic: 5M+ developers, 1M+ apps shipped; Stencil ~100K+ devs',
   },
   {
     name: 'Banking UI kits and PCI-scoped widgets',
     note: 'Some banks ship login keypads and card-entry widgets as sealed Web Components, deliberately to prevent third-party scripts (and incidentally any automation) from reading inside.',
+    marketShare: 'Pattern adopted across Tier-1 retail-banking platforms (FIS, Temenos, etc.)',
+    users: 'Hundreds of millions of online banking customers worldwide',
   },
 ];
 ---
@@ -55,11 +74,32 @@ const usedBy: Array<{ name: string; note: string }> = [
     <ul class="mt-3 grid gap-2 text-sm">
       {usedBy.map((app) => (
         <li class="rounded-lg border border-slate-200 bg-white p-3 shadow-sm">
-          <span class="font-semibold text-slate-900">{app.name}</span>
-          <span class="text-slate-600"> — <span set:html={app.note} /></span>
+          <div>
+            <span class="font-semibold text-slate-900">{app.name}</span>
+            <span class="text-slate-600"> — <span set:html={app.note} /></span>
+          </div>
+          {(app.marketShare || app.users) && (
+            <div class="mt-2 flex flex-wrap gap-1.5 text-[11px]">
+              {app.marketShare && (
+                <span class="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5 text-slate-700">
+                  <span class="font-semibold uppercase tracking-wide text-slate-500">Market</span>
+                  <span>{app.marketShare}</span>
+                </span>
+              )}
+              {app.users && (
+                <span class="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5 text-slate-700">
+                  <span class="font-semibold uppercase tracking-wide text-slate-500">Users</span>
+                  <span>{app.users}</span>
+                </span>
+              )}
+            </div>
+          )}
         </li>
       ))}
     </ul>
+    <p class="mt-3 text-[11px] text-slate-400">
+      Figures are approximate / company-disclosed (~2024–2025). Sources: company filings, industry reports (Gartner, IDC, BuiltWith, npm stats), and public DAU disclosures.
+    </p>
   </section>
 </LevelLayout>
 

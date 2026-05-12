@@ -74,4 +74,36 @@ test.describe('Selector resistance', () => {
     await page.getByRole('button', { name: 'Sign in' }).click();
     await expect(page.getByText('Access granted')).toBeVisible();
   });
+
+  test('Level 5 sign in', async ({ page }) => {
+    await page.goto('/selector-resistance/level-5/');
+    await page.getByLabel('Email').fill('user@example.com');
+    await page.getByLabel('Password').fill('hunter2');
+    await page.getByRole('button', { name: 'Sign in' }).click();
+    await expect(page.getByText('Access granted')).toBeVisible();
+  });
+
+  test('Level 6 sign in', async ({ page }) => {
+    await page.goto('/selector-resistance/level-6/');
+    await page.getByLabel('Email').fill('user@example.com');
+    await page.getByLabel('Password').fill('hunter2');
+    await page.getByRole('button', { name: 'Sign in' }).click();
+    await expect(page.getByText('Access granted')).toBeVisible();
+  });
+
+  test('Level 7 sign in', async ({ page }) => {
+    await page.goto('/selector-resistance/level-7/');
+    await page.getByLabel('Email').fill('user@example.com');
+    await page.getByLabel('Password').fill('hunter2');
+    await page.getByRole('button', { name: 'Sign in' }).click();
+    await expect(page.getByText('Access granted')).toBeVisible();
+  });
+
+  test('Level 8 sign in', async ({ page }) => {
+    await page.goto('/selector-resistance/level-8/');
+    await page.getByLabel('Email').fill('user@example.com');
+    await page.getByLabel('Password').fill('hunter2');
+    await page.getByRole('button', { name: 'Sign in' }).click();
+    await expect(page.getByText('Access granted')).toBeVisible();
+  });
 });

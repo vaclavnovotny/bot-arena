@@ -22,34 +22,55 @@ const measured = `
 - An image-aware automation tool reads "Email" off the screen and clicks the input box right under it. The DOM mess is invisible to it.
 `;
 
-const usedBy: Array<{ name: string; note: string }> = [
+interface AppEntry {
+  name: string;
+  note: string;
+  marketShare?: string;
+  users?: string;
+}
+
+const usedBy: AppEntry[] = [
   {
     name: 'Material UI (MUI), Chakra UI, Mantine',
     note: 'CSS-in-JS frameworks generate hashed class names like <code>css-1abc23</code> on every build. Selectors written against those classes break with every release.',
+    marketShare: 'MUI ~22% of React UI libraries (largest)',
+    users: 'MUI ~5M weekly npm downloads; Mantine 300K+; Chakra 500K+',
   },
   {
     name: 'styled-components, emotion',
     note: 'Every styled element ships a generated hash class. Many production React apps (Stripe Dashboard, Notion, Vercel, GitHub Primer-styled surfaces) ride on these.',
+    marketShare: '~30% of React styling solutions combined',
+    users: 'emotion ~16M + styled-components ~7M weekly npm downloads',
   },
   {
     name: 'Vue scoped CSS, Angular emulated encapsulation',
     note: 'Vue injects a per-component <code>data-v-XXXXXXX</code> hash; Angular adds <code>_ngcontent-c123</code> attributes. Hashes change between builds.',
+    marketShare: 'Vue ~17%, Angular ~17% of frontend framework market',
+    users: '~4M Vue devs + ~2M Angular devs (StackOverflow 2024)',
   },
   {
     name: 'Salesforce Lightning / ServiceNow',
     note: 'Both generate per-instance IDs (<code>lightning-id-…</code>, <code>sn-id-…</code>) and rotate them across releases. Cross-tenant test recordings always break.',
+    marketShare: 'Salesforce ~20% CRM; ServiceNow ~45% ITSM',
+    users: 'Salesforce 150K+ orgs / 300M+ end users; ServiceNow 8K+ enterprise / ~85% of Fortune 500',
   },
   {
     name: 'ASP.NET WebForms',
     note: 'Postback IDs like <code>__ctl00$ContentPlaceHolder1$gv$ctl05</code> change as soon as the page tree is edited in Visual Studio. Still in heavy use across enterprise back-office portals.',
+    marketShare: '~3% of all websites (BuiltWith); large legacy install base',
+    users: 'Tens of thousands of enterprise back-office and government portals',
   },
   {
     name: 'Anti-bot WAFs (Cloudflare Bot Management, Akamai Bot Manager, DataDome, HUMAN/PerimeterX)',
     note: 'Edge workers inject per-session attribute randomisation in front of any site — used heavily by airlines, ticketing platforms, and high-value retail.',
+    marketShare: 'Cloudflare fronts ~20% of all websites; Akamai ~25–30% of enterprise WAF',
+    users: 'HUMAN protects $5T+ annual transactions; DataDome ~10K customers',
   },
   {
     name: 'Banking & ticketing login flows',
     note: 'Many banks rotate input <code>name=</code> attributes every session to defeat credential stuffing. Ticketmaster / Live Nation are famous for rotating selectors during high-demand sales.',
+    marketShare: 'Ticketmaster ~70% of US primary ticketing',
+    users: 'Ticketmaster ~230M tickets/year; major retail banks reach hundreds of millions of customers',
   },
 ];
 ---
@@ -117,11 +138,32 @@ const usedBy: Array<{ name: string; note: string }> = [
     <ul class="mt-3 grid gap-2 text-sm">
       {usedBy.map((app) => (
         <li class="rounded-lg border border-slate-200 bg-white p-3 shadow-sm">
-          <span class="font-semibold text-slate-900">{app.name}</span>
-          <span class="text-slate-600"> — <span set:html={app.note} /></span>
+          <div>
+            <span class="font-semibold text-slate-900">{app.name}</span>
+            <span class="text-slate-600"> — <span set:html={app.note} /></span>
+          </div>
+          {(app.marketShare || app.users) && (
+            <div class="mt-2 flex flex-wrap gap-1.5 text-[11px]">
+              {app.marketShare && (
+                <span class="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5 text-slate-700">
+                  <span class="font-semibold uppercase tracking-wide text-slate-500">Market</span>
+                  <span>{app.marketShare}</span>
+                </span>
+              )}
+              {app.users && (
+                <span class="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5 text-slate-700">
+                  <span class="font-semibold uppercase tracking-wide text-slate-500">Users</span>
+                  <span>{app.users}</span>
+                </span>
+              )}
+            </div>
+          )}
         </li>
       ))}
     </ul>
+    <p class="mt-3 text-[11px] text-slate-400">
+      Figures are approximate / company-disclosed (~2024–2025). Sources: company filings, industry reports (Gartner, IDC, BuiltWith, npm stats), and public DAU disclosures.
+    </p>
   </section>
 </LevelLayout>
 

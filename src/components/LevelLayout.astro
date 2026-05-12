@@ -13,7 +13,7 @@ interface Props {
 const { section, localN, title, summary, measured } = Astro.props;
 
 const sectionDisplayName = section === 'bot-detection' ? 'Bot detection' : 'Selector resistance';
-const sectionSize = section === 'bot-detection' ? 5 : 4;
+const sectionSize = section === 'bot-detection' ? 5 : 8;
 
 let prev: string;
 if (localN > 1) {
