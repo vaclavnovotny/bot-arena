@@ -508,6 +508,178 @@ await expect(frame.getByText('Access granted')).toBeVisible();</pre>
       `,
     },
   },
+  {
+    n: 10,
+    section: 'Selector resistance',
+    title: 'Slider verification',
+    family: 'Drag-to-align CAPTCHA',
+    testCode: sharedTest(5, '/selector-resistance/level-5/'),
+    failureMessage: sharedFailure,
+    signals: [
+      { status: 'pass', id: 'inputs-fillable', detail: 'Email and Password are reachable via getByLabel — those parts work.' },
+      { status: 'fail', id: 'slider-not-solved', detail: 'The slider knob was never dragged into the target zone — verified flag stays false on submit.' },
+      { status: 'fail', id: 'access-granted-not-shown', detail: 'expect(getByText("Access granted")).toBeVisible() times out because the form refused submission with "Blocked — verification required".' },
+    ],
+    layman: {
+      problem:
+        'Slider CAPTCHAs are the dominant anti-bot pattern across the Chinese internet (GeeTest, NetEase, Tencent, Alibaba) and increasingly common in Western anti-bot stacks (Cloudflare interactive, AWS WAF, ticketing platforms). The user is shown a randomised image with a notched gap, and a draggable puzzle piece somewhere else. To pass, drag the piece into the gap. The position of the gap is part of an image — there is no DOM hint for where it is. A test can drag, but only a tool that can SEE the gap knows where to drag to.',
+      workaround:
+        'A vision-based automation tool screenshots the slider, finds the highlighted target zone in the image, computes its X coordinate, and dispatches an OS-level mouse drag to that exact position. The drag is real — the browser receives a real sequence of mousemove events from a real cursor. The slider sees a human-shaped gesture and unlocks the form.',
+    },
+    playwright: {
+      difficulty: 5,
+      label: 'Impossible without external vision',
+      notes: `
+        <p><strong>Verdict: impossible from inside Playwright. Playwright can drag (mouse.down/move/up at coordinates) but it cannot SEE the target zone.</strong></p>
+        <p class="mt-2">The only paths a Playwright author has:</p>
+        <ul class="mt-2 list-disc space-y-1 pl-5">
+          <li>Take a screenshot via Playwright, pass the image to an external OCR / template-matching service, extract the target X coordinate, dispatch <code>page.mouse.down/move/up</code>. At that point you have built half of AIVA inside your test runner.</li>
+          <li>Use a paid CAPTCHA-solving service (similar to the Turnstile case). The service routes the challenge through real browsers, returns the solved token. Per-run cost + third-party dependency.</li>
+        </ul>
+        <p class="mt-2">For real production slider CAPTCHAs (GeeTest, Alibaba, AWS WAF), the gap position is also rotated, scaled, and obfuscated with noise — generic OCR fails. Vendor-specific solver services are the only working option, and they cost ~$1-3 per 1000 solves.</p>
+      `,
+    },
+    aiva: {
+      passes: true,
+      notes: `
+        <p><strong>AIVA passes this level natively.</strong> The drag gesture is exactly the kind of interaction AIVA is built to do: identify the target visually, dispatch an OS-level mouse drag at the right coordinates with a realistic trajectory. The slider sees real movement events from a real cursor and unlocks.</p>
+        <p class="mt-2">As a category, drag-aligned CAPTCHAs are the bread and butter of Chinese-market anti-bot defence and increasingly common globally. Every vision-based automation pipeline handles them; every selector-based test pipeline does not.</p>
+      `,
+    },
+  },
+  {
+    n: 11,
+    section: 'Selector resistance',
+    title: 'Image-only labels',
+    family: 'No DOM text — labels are pixels',
+    testCode: sharedTest(6, '/selector-resistance/level-6/'),
+    failureMessage: selectorFailure,
+    signals: [
+      { status: 'info', id: 'inputs-present', detail: 'Real <input> elements exist in the DOM, but they have no <label>, no aria-label, no placeholder, no title.' },
+      { status: 'fail', id: 'getByLabel-email', detail: "page.getByLabel('Email') — no <label> element associates with anything." },
+      { status: 'fail', id: 'getByText-email', detail: 'page.getByText("Email") — the text "Email" is inside an <img> as SVG, not as a text node.' },
+      { status: 'fail', id: 'getByRole-textbox', detail: 'page.getByRole("textbox", { name: "Email" }) — no accessible name on the input.' },
+    ],
+    layman: {
+      problem:
+        'Some sites — historically many banks, brokerages, anti-scrape news sites, and some CAPTCHA prompts — render every visible label as an image, deliberately to defeat scrapers and automated tools. From a human standpoint the form looks perfectly normal: "Email" written above an empty field, "Password" written above another, "Sign in" on the button. From a test\'s standpoint there is no text anywhere — every "label" is a graphic with empty alt text. Accessibility-based selectors find nothing.',
+      workaround:
+        'Vision-based automation reads the rendered image with OCR exactly the way a human reads it. It sees "Email" written above a text-input-shaped rectangle and clicks. The fact that the text is an image rather than a DOM text node is invisible to OCR — they\'re both pixels.',
+    },
+    playwright: {
+      difficulty: 4,
+      label: 'No semantic anchors; only brittle structural selectors',
+      notes: `
+        <p><strong>Verdict: only brittle structural fallbacks remain. The promise of accessibility-driven testing is gone here.</strong></p>
+        <p class="mt-2">Every label is an SVG/PNG image with empty alt. Playwright's accessibility-based locators return empty:</p>
+        <ul class="mt-2 list-disc space-y-1 pl-5">
+          <li><code>page.getByLabel('Email')</code> — no <code>&lt;label&gt;</code> element exists.</li>
+          <li><code>page.getByRole('textbox', { name: 'Email' })</code> — no accessible name on the input.</li>
+          <li><code>page.getByPlaceholder('Email')</code> — no placeholder.</li>
+          <li><code>page.getByText('Email')</code> — text is in image pixels, not a DOM text node.</li>
+        </ul>
+        <p class="mt-2">Possible fallbacks:</p>
+        <ol class="mt-2 list-decimal space-y-1 pl-5">
+          <li><code>page.locator('input').nth(0)</code> — works this layout; breaks on the slightest reorder.</li>
+          <li>Click at hard-coded pixel coordinates via <code>page.mouse.click(x, y)</code> — exactly the kind of brittle, screen-resolution-dependent code that motivates moving away from selector tests in the first place.</li>
+          <li>Integrate an OCR library, OCR the screenshot, find the label position, derive coordinates — at which point your test suite has reimplemented visual automation badly.</li>
+        </ol>
+        <p class="mt-2">In real production deployments (bank login keypads with shuffled-position digit images), each session also changes the layout — so even nth-child fallbacks decay across runs.</p>
+      `,
+    },
+    aiva: {
+      passes: true,
+      notes: `
+        <p><strong>AIVA passes this level natively.</strong> AIVA's primary input is the rendered screenshot, processed through OCR for text recognition. "Email" is the same to it whether it came from a DOM text node, an inline SVG, a PNG, or pixel-by-pixel canvas painting. The label-and-input-below visual pattern is recognised the same way regardless of how the page was built.</p>
+        <p class="mt-2">As a category, image-rendered text is everywhere in legacy financial and government software (and increasingly in anti-scraping CAPTCHAs that render even their prompt text as images). For DOM-based testing it is structurally impossible to do reliably. For vision-based automation it is no different from any other login page.</p>
+      `,
+    },
+  },
+  {
+    n: 12,
+    section: 'Selector resistance',
+    title: 'Cross-origin iframe',
+    family: 'Form on a different origin',
+    testCode: sharedTest(7, '/selector-resistance/level-7/'),
+    failureMessage: selectorFailure,
+    signals: [
+      { status: 'info', id: 'iframe-cross-origin', detail: 'iframe src is a data: URI with an opaque origin — cross-origin to the parent page.' },
+      { status: 'fail', id: 'getByLabel-email', detail: "page.getByLabel('Email') — main-frame-scoped, finds nothing." },
+      { status: 'fail', id: 'frameLocator-blocked', detail: 'page.frameLocator("iframe").getByLabel("Email") — Playwright refuses to script into a cross-origin frame; browser same-origin policy.' },
+      { status: 'fail', id: 'getByText-granted', detail: 'expect(getByText("Access granted")).toBeVisible() — the message lives inside the cross-origin frame and is invisible to the parent.' },
+    ],
+    layman: {
+      problem:
+        'When you embed a third-party widget like a Stripe card form, an Auth0 hosted login, or a Cloudflare Turnstile challenge, that widget runs in a separate browser-level sandbox loaded from a different origin (a different domain). The browser\'s same-origin security policy prohibits the host page — and any test framework running in the host page\'s context — from reading or interacting with the widget\'s internals. This is by design: it is what stops malicious sites from stealing credit-card details from embedded payment forms. The unavoidable side effect is that automated tests cannot reach in either.',
+      workaround:
+        'AIVA does not look at the DOM. Its input is the composited screenshot, which the browser draws cross-origin content into exactly like everything else. The Stripe card field, the Auth0 dialog, the Turnstile box — all visible as pixels in one image. AIVA sees one rectangle of pixels with an "Email" label and clicks the input.',
+    },
+    playwright: {
+      difficulty: 5,
+      label: 'Browser security; literally impossible',
+      notes: `
+        <p><strong>Verdict: this is a hard ceiling enforced by the browser security model, not by Playwright.</strong></p>
+        <p class="mt-2">Cross-origin iframes are sandboxed by the same-origin policy. The browser does not let any JavaScript in the parent page (including Playwright's injected scripts) read or write content in a cross-origin frame. <code>page.frameLocator</code> can list cross-origin iframes but cannot script into them.</p>
+        <p class="mt-2">For real third-party widgets (Stripe Elements, Auth0, Turnstile) the only supported automation paths are:</p>
+        <ul class="mt-2 list-disc space-y-1 pl-5">
+          <li>Use the vendor's test mode + their own SDK. Stripe ships a <code>cardElement.update()</code> helper in test mode; Auth0 has Lock mock APIs.</li>
+          <li>Run a parallel test against the iframe URL directly, with no shared session state with the host page. This breaks any flow that needs the host's auth state.</li>
+          <li>Pay a third-party solver to operate the widget in a real browser and inject the resulting token.</li>
+        </ul>
+        <p class="mt-2">None of these is "your test calling page.getByLabel('Email').fill(...)". The Playwright-native solution does not exist by design.</p>
+      `,
+    },
+    aiva: {
+      passes: true,
+      notes: `
+        <p><strong>AIVA passes this level natively.</strong> The screenshot AIVA reads is the composited final pixels, identical to what a human user sees. Cross-origin boundaries exist only inside the DOM model; once the browser has finished painting, those boundaries are invisible. AIVA reads "Email", clicks below it, types — and the iframe receives keystrokes via the OS-level keyboard pipeline exactly like any user typing into a Stripe field.</p>
+        <p class="mt-2">This is the largest single advantage of vision-based automation in production. Payment forms, hosted auth, CAPTCHA challenges, embedded SDKs — all of these use cross-origin iframes by industry convention. Selector-based testing handles them via fragile vendor-specific workarounds; vision-based automation handles them as ordinary pixels.</p>
+      `,
+    },
+  },
+  {
+    n: 13,
+    section: 'Selector resistance',
+    title: 'Virtual scrolling',
+    family: 'Windowed list — off-screen items are absent from DOM',
+    testCode: sharedTest(8, '/selector-resistance/level-8/'),
+    failureMessage: selectorFailure,
+    signals: [
+      { status: 'info', id: 'list-virtualised', detail: '1,000 logical accounts; only ~10 visible rows are mounted in the DOM at any moment.' },
+      { status: 'fail', id: 'getByLabel-email', detail: "page.getByLabel('Email') — no Email field exists on this page; the email is selected by clicking a row." },
+      { status: 'fail', id: 'getByText-target', detail: 'page.getByText("user-371@example.com") — the row for user-371 is not currently mounted; locator returns empty.' },
+      { status: 'info', id: 'scroll-required', detail: 'A working test would have to detect virtualisation, compute the row\'s scroll position, scrollTop into view, then click. Requires bespoke per-list logic.' },
+    ],
+    layman: {
+      problem:
+        'Performant lists in modern web apps only render the rows currently inside the visible viewport — a technique called virtual scrolling or windowing. Used by Slack\'s message history, Notion\'s database views, Gmail\'s thread list, every data-grid library (AG Grid, MUI X, TanStack Virtual). When a test wants to click an item that is 500 rows down, the row simply does not exist in the DOM until the list has been scrolled past it. Standard test idioms ("find the row, click it") return nothing.',
+      workaround:
+        'A vision-based automation tool already has a scroll-and-recognise loop built into its pipeline. It scrolls the visible viewport, takes a new screenshot, looks for the target visually, scrolls again, and repeats until the target appears. This is exactly what a human does. AIVA does not need to know that the list is virtualised — it does what humans do.',
+    },
+    playwright: {
+      difficulty: 4,
+      label: 'Requires bespoke per-list scroll logic',
+      notes: `
+        <p><strong>Verdict: solvable with significant per-list bespoke code; the standard test idioms do not work.</strong></p>
+        <p class="mt-2">For each virtualised list a test interacts with, the test author has to:</p>
+        <ol class="mt-2 list-decimal space-y-1 pl-5">
+          <li>Know that the list is virtualised (it might not be obvious from the rendered HTML).</li>
+          <li>Know the total number of rows and the row height to compute where to scroll.</li>
+          <li>Dispatch a programmatic scroll on the list container, wait for the new rows to mount, query, repeat.</li>
+          <li>Alternatively, scroll incrementally and probe for the target row after each step.</li>
+        </ol>
+        <p class="mt-2">All of this is custom code that lives inside the test suite. Different virtualisation libraries (react-window, TanStack Virtual, AG Grid) expose different APIs — there is no portable solution. And many sites virtualise BOTH rows AND columns, multiplying the complexity.</p>
+        <p class="mt-2">For real apps with very long lists (Gmail, Slack, AG Grid dashboards), the per-test cost compounds: every test that needs to click a non-visible item has its own scroll helper, its own retry logic, its own flake mode.</p>
+      `,
+    },
+    aiva: {
+      passes: true,
+      notes: `
+        <p><strong>AIVA passes this level natively.</strong> Visual automation systems are built around a perception loop: screenshot, look, decide what to do, act, screenshot again. Scrolling a virtualised list is exactly the same as scrolling any other long list — AIVA scrolls a screen, looks for the target, scrolls again if needed. Whether the rows are virtualised, all-DOM, or paginated does not matter — they are all just visible rows on screen at the moment of the screenshot.</p>
+        <p class="mt-2">As a category, every data-heavy SaaS app (Slack, Notion, Linear, Salesforce, ServiceNow, every CRM and ERP) uses virtualisation. Selector-based testing builds an ever-growing pile of per-list scrollers; vision-based automation does not.</p>
+      `,
+    },
+  },
 ];
 
 const totalFails = levels.reduce((acc, l) => acc + l.signals.filter((s) => s.status === 'fail').length, 0);
