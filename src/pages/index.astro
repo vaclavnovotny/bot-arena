@@ -83,10 +83,13 @@ const sections = [
           <section>
             <h2 class="text-xs font-semibold uppercase tracking-widest text-slate-500">{s.name}</h2>
             <p class="mt-1 max-w-2xl text-sm text-slate-600">{s.description}</p>
-            <ol class="mt-4 grid gap-4 sm:grid-cols-2">
+            <ol class="mt-4 grid auto-rows-fr gap-4 sm:grid-cols-2">
               {s.levels.map((l) => (
-                <li class="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-                  <a href={`/${s.slug}/level-${l.localN}/`} class="block">
+                <li class="flex">
+                  <a
+                    href={`/${s.slug}/level-${l.localN}/`}
+                    class="flex flex-1 flex-col rounded-xl border border-slate-200 bg-white p-5 shadow-sm hover:border-slate-300"
+                  >
                     <div class="text-xs font-semibold uppercase tracking-wide text-slate-500">
                       Level {l.localN}
                     </div>

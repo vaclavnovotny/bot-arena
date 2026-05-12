@@ -378,6 +378,53 @@ await page.evaluate((t) =&gt; {
     },
   },
   {
+    n: 7,
+    section: 'Selector resistance',
+    title: 'Dynamic selectors',
+    family: 'Real form, randomised identifiers',
+    testCode: sharedTest(2, '/selector-resistance/level-2/'),
+    failureMessage: selectorFailure,
+    signals: [
+      { status: 'info', id: 'form-rendered', detail: 'A real <form> with real <input> elements — but every id/name/class is randomised per request, and there are no <label> elements.' },
+      { status: 'fail', id: 'getByLabel-email', detail: "page.getByLabel('Email') fails — no <label> element associates with the input." },
+      { status: 'pass', id: 'getByRole-button', detail: "page.getByRole('button', { name: 'Sign in' }) works (button text is stable)." },
+      { status: 'info', id: 'fallback-fragility', detail: 'Even structural fallbacks like input:nth-of-type(1) work this run, but break on the next form revision.' },
+    ],
+    layman: {
+      problem:
+        'Modern web apps frequently ship with build-time CSS-in-JS, which produces randomised class names. Some apps go further and randomise every attribute — <code>id</code>, <code>name</code>, <code>class</code>, <code>aria-label</code> — on every page request, and omit <code>&lt;label&gt;</code> elements altogether. A human still reads "Email" off the screen and types in the box below. A test that uses accessibility-based locators sees nothing it can grab — every locator it had hardcoded is now stale.',
+      workaround:
+        'AIVA reads "Email" from the screen pixels and clicks the input it visually identifies as a text box just below the label text. It does not look at attributes; it looks at the rendered shape of the page. Randomising the DOM has no effect on it — the visual layout is what matters.',
+    },
+    playwright: {
+      difficulty: 4,
+      label: 'Brittle workarounds, no stable selector',
+      notes: `
+        <p><strong>Verdict: possible with brittle fallback selectors, but the entire promise of accessibility-based testing is gone.</strong></p>
+        <p class="mt-2">Playwright's normal idioms break:</p>
+        <ul class="mt-2 list-disc space-y-1 pl-5">
+          <li><code>page.getByLabel('Email')</code> — no <code>&lt;label&gt;</code> element exists, so this returns nothing.</li>
+          <li><code>page.getByRole('textbox', { name: 'Email' })</code> — no accessible name, so this returns nothing.</li>
+          <li><code>page.getByPlaceholder('Email')</code> — no <code>placeholder</code>, so this returns nothing.</li>
+        </ul>
+        <p class="mt-2">Possible fallbacks, in increasing brittleness:</p>
+        <ol class="mt-2 list-decimal space-y-1 pl-5">
+          <li><code>page.locator('input[type="email"]')</code> — works this run; breaks if the input type is also randomised, or another email input is added.</li>
+          <li><code>page.locator('input').nth(0)</code> — works this run; breaks the moment the form reorders or grows.</li>
+          <li><code>page.locator('div:has-text("Email") + input')</code> — works for this layout; breaks if the DOM structure is rewritten.</li>
+        </ol>
+        <p class="mt-2">For a truly hostile site, every fallback is one revision away from breaking. The maintenance burden grows linearly with the number of forms; the test suite becomes the single largest source of flakiness in the project.</p>
+      `,
+    },
+    aiva: {
+      passes: true,
+      notes: `
+        <p><strong>AIVA passes this level natively.</strong> AIVA does not look at attributes. It looks at the visible rendering: a label that says "Email", an input box beneath it, a similar pair for "Password", a dark button labelled "Sign in". Randomising the DOM attributes changes nothing about that visual layout — the OCR and template matching find the same targets in the same places.</p>
+        <p class="mt-2">As a category, "selector resistance" is invisible to AIVA by construction. Every visual automation tool — AIVA, image-based RPA platforms, agentic vision models — sits in this same advantage zone.</p>
+      `,
+    },
+  },
+  {
     n: 8,
     section: 'Selector resistance',
     title: 'Closed Shadow DOM',
@@ -458,53 +505,6 @@ await expect(frame.getByText('Access granted')).toBeVisible();</pre>
       notes: `
         <p><strong>AIVA passes this level natively.</strong> AIVA's screenshot includes the iframe contents because the browser composites them into the page exactly like any other element. The image-recognition pipeline sees one form, finds the inputs visually, clicks and types. Frame boundaries do not exist at the pixel level.</p>
         <p class="mt-2">This is a major real-world advantage. Payment flows (Stripe, Adyen, Braintree), embedded auth (Auth0, Okta, WorkOS), and most "embedded SDK" patterns ship as iframes — usually cross-origin. Vision-based automation handles them by construction; selector-based testing handles them only after significant per-frame rewrites, and not at all when the frames are cross-origin.</p>
-      `,
-    },
-  },
-  {
-    n: 7,
-    section: 'Selector resistance',
-    title: 'Dynamic selectors',
-    family: 'Real form, randomised identifiers',
-    testCode: sharedTest(2, '/selector-resistance/level-2/'),
-    failureMessage: selectorFailure,
-    signals: [
-      { status: 'info', id: 'form-rendered', detail: 'A real <form> with real <input> elements — but every id/name/class is randomised per request, and there are no <label> elements.' },
-      { status: 'fail', id: 'getByLabel-email', detail: "page.getByLabel('Email') fails — no <label> element associates with the input." },
-      { status: 'pass', id: 'getByRole-button', detail: "page.getByRole('button', { name: 'Sign in' }) works (button text is stable)." },
-      { status: 'info', id: 'fallback-fragility', detail: 'Even structural fallbacks like input:nth-of-type(1) work this run, but break on the next form revision.' },
-    ],
-    layman: {
-      problem:
-        'Modern web apps frequently ship with build-time CSS-in-JS, which produces randomised class names. Some apps go further and randomise every attribute — <code>id</code>, <code>name</code>, <code>class</code>, <code>aria-label</code> — on every page request, and omit <code>&lt;label&gt;</code> elements altogether. A human still reads "Email" off the screen and types in the box below. A test that uses accessibility-based locators sees nothing it can grab — every locator it had hardcoded is now stale.',
-      workaround:
-        'AIVA reads "Email" from the screen pixels and clicks the input it visually identifies as a text box just below the label text. It does not look at attributes; it looks at the rendered shape of the page. Randomising the DOM has no effect on it — the visual layout is what matters.',
-    },
-    playwright: {
-      difficulty: 4,
-      label: 'Brittle workarounds, no stable selector',
-      notes: `
-        <p><strong>Verdict: possible with brittle fallback selectors, but the entire promise of accessibility-based testing is gone.</strong></p>
-        <p class="mt-2">Playwright's normal idioms break:</p>
-        <ul class="mt-2 list-disc space-y-1 pl-5">
-          <li><code>page.getByLabel('Email')</code> — no <code>&lt;label&gt;</code> element exists, so this returns nothing.</li>
-          <li><code>page.getByRole('textbox', { name: 'Email' })</code> — no accessible name, so this returns nothing.</li>
-          <li><code>page.getByPlaceholder('Email')</code> — no <code>placeholder</code>, so this returns nothing.</li>
-        </ul>
-        <p class="mt-2">Possible fallbacks, in increasing brittleness:</p>
-        <ol class="mt-2 list-decimal space-y-1 pl-5">
-          <li><code>page.locator('input[type="email"]')</code> — works this run; breaks if the input type is also randomised, or another email input is added.</li>
-          <li><code>page.locator('input').nth(0)</code> — works this run; breaks the moment the form reorders or grows.</li>
-          <li><code>page.locator('div:has-text("Email") + input')</code> — works for this layout; breaks if the DOM structure is rewritten.</li>
-        </ol>
-        <p class="mt-2">For a truly hostile site, every fallback is one revision away from breaking. The maintenance burden grows linearly with the number of forms; the test suite becomes the single largest source of flakiness in the project.</p>
-      `,
-    },
-    aiva: {
-      passes: true,
-      notes: `
-        <p><strong>AIVA passes this level natively.</strong> AIVA does not look at attributes. It looks at the visible rendering: a label that says "Email", an input box beneath it, a similar pair for "Password", a dark button labelled "Sign in". Randomising the DOM attributes changes nothing about that visual layout — the OCR and template matching find the same targets in the same places.</p>
-        <p class="mt-2">As a category, "selector resistance" is invisible to AIVA by construction. Every visual automation tool — AIVA, image-based RPA platforms, agentic vision models — sits in this same advantage zone.</p>
       `,
     },
   },
