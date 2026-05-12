@@ -1,0 +1,48 @@
+---
+import '../styles/global.css';
+---
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>About — Bot Arena</title>
+  </head>
+  <body class="min-h-screen bg-slate-50 text-slate-900">
+    <header class="border-b border-slate-200 bg-white">
+      <div class="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
+        <a href="/" class="text-lg font-semibold tracking-tight">🛡️ Bot Arena</a>
+        <nav class="flex gap-4 text-sm text-slate-600">
+          <a href="/" class="hover:text-slate-900">Home</a>
+        </nav>
+      </div>
+    </header>
+
+    <main class="mx-auto max-w-3xl px-6 py-16 text-slate-700">
+      <h1 class="text-3xl font-bold tracking-tight text-slate-900">About this demo</h1>
+
+      <p class="mt-6">
+        Bot Arena is a deliberately-obvious anti-bot target. Each of the five level pages exercises a different family of detection signals that real-world sites use to tell humans from automation.
+      </p>
+      <p class="mt-4">
+        The site does not run any automation itself. It's designed to be a target you point your own tool at. The <strong>Detection Log</strong> panel on every level page shows, in real time, every signal the page captured — passed signals in green, failed signals in red — so you can see exactly which checks your tool tripped.
+      </p>
+
+      <h2 class="mt-12 text-xl font-semibold text-slate-900">Reading the log</h2>
+      <ul class="mt-3 list-disc space-y-2 pl-5">
+        <li><strong>PASS</strong> means the signal is consistent with a real human in a real browser.</li>
+        <li><strong>FAIL</strong> means the signal is consistent with automation or a headless browser.</li>
+        <li><strong>INFO</strong> is a contextual note that doesn't affect the verdict (e.g. "Turnstile widget mode: interactive").</li>
+        <li>The verdict pill at the top of the log aggregates: any FAIL turns it red.</li>
+      </ul>
+
+      <h2 class="mt-12 text-xl font-semibold text-slate-900">No tracking</h2>
+      <p class="mt-3">
+        The site stores nothing about your visit. The Detection Log lives in browser memory and resets when you reload. The one server endpoint (Level 5's Turnstile verification) calls Cloudflare's <code class="rounded bg-slate-100 px-1.5 py-0.5 text-sm">siteverify</code> API and immediately discards the token.
+      </p>
+
+      <p class="mt-12 text-sm text-slate-500">
+        Source: <a class="underline" href="https://github.com/vaclavnovotny/bot-arena">github.com/vaclavnovotny/bot-arena</a>
+      </p>
+    </main>
+  </body>
+</html>
