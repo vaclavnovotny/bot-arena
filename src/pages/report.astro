@@ -37,8 +37,8 @@ interface LevelReport {
   };
 }
 
-const sharedTest = (n: number) => `test('Level ${n} sign in', async ({ page }) => {
-  await page.goto('/level/${n}/');
+const sharedTest = (localN: number, urlN: number) => `test('Level ${localN} sign in', async ({ page }) => {
+  await page.goto('/level/${urlN}/');
   await page.getByLabel('Email').fill('user@example.com');
   await page.getByLabel('Password').fill('hunter2');
   await page.getByRole('button', { name: 'Sign in' }).click();
@@ -64,7 +64,7 @@ const levels: LevelReport[] = [
     section: 'Bot detection',
     title: 'The honest tell',
     family: 'Passive webdriver flags',
-    testCode: sharedTest(1),
+    testCode: sharedTest(1, 1),
     failureMessage: sharedFailure,
     signals: [
       { status: 'fail', id: 'webdriver', detail: 'navigator.webdriver = true' },
@@ -128,7 +128,7 @@ const levels: LevelReport[] = [
     section: 'Bot detection',
     title: 'CDP attached',
     family: 'Headless / CDP-only tells',
-    testCode: sharedTest(2),
+    testCode: sharedTest(2, 2),
     failureMessage: sharedFailure,
     signals: [
       { status: 'pass', id: 'driver-shims', detail: 'no cdc_* globals (Playwright is not Selenium)' },
@@ -193,7 +193,7 @@ const levels: LevelReport[] = [
     section: 'Bot detection',
     title: 'Mouse trajectory',
     family: 'Behavioural — mouse path and keystroke cadence',
-    testCode: sharedTest(3),
+    testCode: sharedTest(3, 3),
     failureMessage: sharedFailure,
     signals: [
       { status: 'info', id: 'level3-armed', detail: 'recorder armed at page load' },
@@ -232,7 +232,7 @@ const levels: LevelReport[] = [
     section: 'Bot detection',
     title: 'Fingerprint battery',
     family: 'Canvas, audio, WebGL renderer, font set',
-    testCode: sharedTest(4),
+    testCode: sharedTest(4, 4),
     failureMessage: sharedFailure,
     signals: [
       { status: 'fail', id: 'webgl-renderer', detail: 'WebGL renderer = "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device …))" — software rasteriser, no GPU' },
@@ -283,7 +283,7 @@ const levels: LevelReport[] = [
     section: 'Bot detection',
     title: 'Cloudflare Turnstile',
     family: 'Real third-party challenge',
-    testCode: sharedTest(5),
+    testCode: sharedTest(5, 5),
     failureMessage: sharedFailure,
     signals: [
       { status: 'fail', id: 'turnstile', detail: 'no token — widget did not solve. Cloudflare refused to issue a token for the automated browser; server-side siteverify never called.' },
@@ -340,7 +340,7 @@ await page.evaluate((t) =&gt; {
     section: 'Selector resistance',
     title: 'Canvas-rendered login',
     family: 'No DOM to query — pixels only',
-    testCode: sharedTest(6),
+    testCode: sharedTest(1, 6),
     failureMessage: selectorFailure,
     signals: [
       { status: 'info', id: 'no-dom', detail: 'Only one DOM element exists in the form region: a <canvas>. No <input>, no <button>, no <label>.' },
@@ -382,7 +382,7 @@ await page.evaluate((t) =&gt; {
     section: 'Selector resistance',
     title: 'Dynamic selectors',
     family: 'Real form, randomised identifiers',
-    testCode: sharedTest(7),
+    testCode: sharedTest(2, 7),
     failureMessage: selectorFailure,
     signals: [
       { status: 'info', id: 'form-rendered', detail: 'A real <form> with real <input> elements — but every id/name/class is randomised per request, and there are no <label> elements.' },
@@ -455,6 +455,7 @@ function fixStyles(difficulty: number) {
 
 const levelData = levels.map((lvl) => ({
   ...lvl,
+  localN: lvl.section === 'Bot detection' ? lvl.n : lvl.n - 5,
   playwrightViz: fixStyles(lvl.playwright.difficulty),
   aivaFixesViz:
     lvl.aiva.fixes?.map((f) => ({
@@ -547,7 +548,7 @@ const groupedLevels = (
             <header>
               <div class="flex flex-wrap items-baseline gap-3">
                 <span class="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                  Level {lvl.n}
+                  Level {lvl.localN}
                 </span>
                 <h2 class="text-2xl font-bold tracking-tight text-slate-900">{lvl.title}</h2>
                 <span class="text-sm text-slate-500">· {lvl.family}</span>
@@ -723,7 +724,7 @@ const groupedLevels = (
                 href={`/level/${lvl.n}/`}
                 class="rounded-md border border-slate-300 bg-white px-3 py-1.5 font-medium text-slate-700 hover:bg-slate-50"
               >
-                Visit Level {lvl.n} →
+                Visit Level {lvl.localN} →
               </a>
               {lvl.n > 1 && (
                 <a

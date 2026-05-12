@@ -6,19 +6,19 @@ const sections = [
     name: 'Bot detection',
     description: 'The site detects automation through fingerprinting, behavioural signals, or third-party challenge.',
     levels: [
-      { n: 1, name: 'The honest tell', blurb: 'navigator.webdriver and other passive Chrome flags.' },
-      { n: 2, name: 'CDP attached', blurb: 'Headless-window shape, missing chrome.app / chrome.csi.' },
-      { n: 3, name: 'Mouse trajectory', blurb: 'Mousemove density, click curvature, keystroke cadence.' },
-      { n: 4, name: 'Fingerprint battery', blurb: 'Canvas, audio, font, and WebGL signals.' },
-      { n: 5, name: 'Cloudflare Turnstile', blurb: 'Managed-mode widget with server-side verification.' },
+      { localN: 1, urlN: 1, name: 'The honest tell', blurb: 'navigator.webdriver and other passive Chrome flags.' },
+      { localN: 2, urlN: 2, name: 'CDP attached', blurb: 'Headless-window shape, missing chrome.app / chrome.csi.' },
+      { localN: 3, urlN: 3, name: 'Mouse trajectory', blurb: 'Mousemove density, click curvature, keystroke cadence.' },
+      { localN: 4, urlN: 4, name: 'Fingerprint battery', blurb: 'Canvas, audio, font, and WebGL signals.' },
+      { localN: 5, urlN: 5, name: 'Cloudflare Turnstile', blurb: 'Managed-mode widget with server-side verification.' },
     ],
   },
   {
     name: 'Selector resistance',
     description: 'The DOM that selector-based automation depends on is absent or randomised.',
     levels: [
-      { n: 6, name: 'Canvas-rendered login', blurb: 'No DOM form — pixels only on a <canvas>.' },
-      { n: 7, name: 'Dynamic selectors', blurb: 'Real form, but every id/name/class rerolls per request.' },
+      { localN: 1, urlN: 6, name: 'Canvas-rendered login', blurb: 'No DOM form — pixels only on a <canvas>.' },
+      { localN: 2, urlN: 7, name: 'Dynamic selectors', blurb: 'Real form, but every id/name/class rerolls per request.' },
     ],
   },
 ];
@@ -82,9 +82,9 @@ const sections = [
             <ol class="mt-4 grid gap-4 sm:grid-cols-2">
               {s.levels.map((l) => (
                 <li class="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-                  <a href={`/level/${l.n}/`} class="block">
+                  <a href={`/level/${l.urlN}/`} class="block">
                     <div class="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                      Level {l.n}
+                      Level {l.localN}
                     </div>
                     <div class="mt-1 text-lg font-semibold text-slate-900">{l.name}</div>
                     <p class="mt-1 text-sm text-slate-600" set:html={l.blurb} />

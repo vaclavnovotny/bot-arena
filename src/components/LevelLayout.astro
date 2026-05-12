@@ -11,16 +11,28 @@ interface Props {
 
 const { levelNumber, title, summary, measured } = Astro.props;
 const sectionName = levelNumber <= 5 ? 'Bot detection' : 'Selector resistance';
+const localN = levelNumber <= 5 ? levelNumber : levelNumber - 5;
+
 const prev = levelNumber > 1 ? `/level/${levelNumber - 1}` : '/';
 const next = levelNumber < 7 ? `/level/${levelNumber + 1}` : '/about';
-const nextLabel = levelNumber < 7 ? `Level ${levelNumber + 1} →` : 'About →';
+
+let nextLabel = 'About →';
+if (levelNumber < 7) {
+  const nextN = levelNumber + 1;
+  const nextSection = nextN <= 5 ? 'Bot detection' : 'Selector resistance';
+  const nextLocalN = nextN <= 5 ? nextN : nextN - 5;
+  nextLabel =
+    nextSection === sectionName
+      ? `Level ${nextLocalN} →`
+      : `${nextSection} · Level ${nextLocalN} →`;
+}
 ---
 <html lang="en">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <title>Level {levelNumber} — {title} · Bot Arena</title>
+    <title>{sectionName} · Level {localN} — {title} · Bot Arena</title>
     <script is:inline>
       // Bus must exist before any detection script runs.
       (function () {
@@ -71,7 +83,7 @@ const nextLabel = levelNumber < 7 ? `Level ${levelNumber + 1} →` : 'About →'
       <section class="flex-1">
         <div class="mb-1 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
           <span class="rounded-full bg-slate-200 px-2 py-0.5 text-[10px] text-slate-700">{sectionName}</span>
-          <span>· Level {levelNumber}</span>
+          <span>· Level {localN}</span>
         </div>
         <h1 class="text-3xl font-bold tracking-tight">{title}</h1>
         <p class="mt-2 max-w-2xl text-slate-600">{summary}</p>
