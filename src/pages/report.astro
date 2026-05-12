@@ -19,6 +19,9 @@ interface LevelReport {
     problem: string;
     workaround: string;
   };
+  playwright: {
+    notes: string; // HTML allowed
+  };
   aiva: {
     passes: boolean;
     notes: string; // HTML allowed
@@ -60,6 +63,18 @@ const levels: LevelReport[] = [
       workaround:
         'The browser inside a VNC session is a regular, fully-fledged Chrome that a regular user started. Nothing is automating it from the inside — the automation happens <em>outside</em> the browser, at the operating-system level, by moving a mouse and pressing keys on a remote desktop. The browser does not know it is being driven, so none of these flags get set, and it reports back the same values any real human visitor would.',
     },
+    playwright: {
+      notes: `
+        <p><strong>Verdict: technically patchable, but it's an arms race that the page always wins eventually.</strong></p>
+        <p class="mt-2">Each of the five remaining signals can in principle be spoofed from Playwright:</p>
+        <ul class="mt-2 list-disc space-y-1 pl-5">
+          <li><code>navigator.webdriver</code> can be hidden via <code>--disable-blink-features=AutomationControlled</code> plus an <code>addInitScript</code> that redefines the property.</li>
+          <li>The User-Agent can be spoofed with <code>--user-agent="..."</code> to strip the <code>HeadlessChrome</code> token.</li>
+          <li><code>navigator.plugins</code>, <code>navigator.languages</code>, and the <code>Notification.permission</code> / <code>permissions.query</code> pair can all be patched via <code>Object.defineProperty</code> in an init script.</li>
+        </ul>
+        <p class="mt-2">Off-the-shelf stealth bundles (<code>playwright-extra</code> + <code>puppeteer-extra-plugin-stealth</code>) ship most of these patches already. The catch: every Chrome release introduces new tells, and commercial bot-detection vendors (Cloudflare, DataDome, PerimeterX, Imperva) maintain fingerprint databases of every known stealth-plugin signature. You spend more time updating your evasions than writing tests, and you only ever win <em>temporarily</em>.</p>
+      `,
+    },
     aiva: {
       passes: false,
       notes: `
@@ -94,6 +109,18 @@ const levels: LevelReport[] = [
         '<strong>What "CDP" means:</strong> CDP stands for <em>Chrome DevTools Protocol</em> — the low-level remote-control interface Chrome exposes for tools like Chrome\'s own DevTools panel, Puppeteer, and Playwright. It is how those tools "drive" Chrome from outside the browser: clicking buttons, typing text, reading the DOM, taking screenshots — all without using a real keyboard and mouse. When CDP is attached, Chrome behaves slightly differently in measurable ways, and many of those differences also coincide with "I am running headless." <br /><br />A real laptop has visible chrome around every browser window — toolbars at the top, tabs, a Windows taskbar at the bottom, a macOS menu bar — and this chrome takes up real pixels. The browser can ask the screen "how much of you is mine, versus the OS\'s?" and the answer comes back in pixels. A headless automated browser has no chrome and no visible window at all, so the honest answer is zero. There is no way to fake having toolbars that do not exist.',
       workaround:
         'A VNC session streams a real, fully visible Chrome window running on a real desktop. There are real toolbars, a real taskbar, real OS chrome. Every measurement the page makes returns the same numbers any human visitor on any laptop would produce. Crucially, the automation happens <em>outside</em> the browser (at the OS level, moving a real cursor) — no CDP is attached, so Chrome behaves like an ordinary Chrome being used by an ordinary person.',
+    },
+    playwright: {
+      notes: `
+        <p><strong>Verdict: partially patchable in script; the pixel measurements require effectively rebuilding what VNC-AIVA already is.</strong></p>
+        <p class="mt-2">The JavaScript-level signals (<code>chrome.app</code>, <code>chrome.csi</code>, driver shims, toString integrity) can be polyfilled with an <code>addInitScript</code> at page load. Easy.</p>
+        <p class="mt-2">The window/screen pixel measurements are different. <code>outerHeight - innerHeight = 0</code> is true because the headless browser <em>literally has no toolbars</em>. Two ways out, neither great:</p>
+        <ol class="mt-2 list-decimal space-y-2 pl-5">
+          <li>Run headed (<code>headless: false</code>) on a server with Xvfb/Xvnc. But then you need a real desktop environment with a window manager and a panel to populate <code>screen.availHeight &lt; screen.height</code>, plus you need Chrome to actually display its chrome (not <code>--kiosk</code>). At that point, you have rebuilt the AIVA architecture from scratch.</li>
+          <li>Spoof the values from JS — override <code>window.outerHeight</code>, <code>screen.height</code>, etc. via <code>addInitScript</code>. But the spoofs need to be internally consistent across signals: if you claim a 1080-pixel screen with a 40-pixel taskbar, the browser viewport's actual height needs to plausibly fit inside that. Cross-signal correlation catches these mismatches.</li>
+        </ol>
+        <p class="mt-2">In practice: an automation team trying to fix L2 with Playwright ends up reinventing AIVA badly.</p>
+      `,
     },
     aiva: {
       passes: false,
@@ -135,6 +162,18 @@ const levels: LevelReport[] = [
       workaround:
         'A VNC operator moves a real mouse cursor on a real operating system, generating the same continuous stream of mouse events any human would. Because the path is a <em>physical</em> movement (the cursor is dragged across the screen by a person or by image-recognition automation steering it), it has the same natural variation and curvature as any other user\'s.',
     },
+    playwright: {
+      notes: `
+        <p><strong>Verdict: bypassable for the basic checks Bot Arena does, but only by hand-rolling humanized interactions everywhere — and any sophisticated behavioural model still wins.</strong></p>
+        <p class="mt-2">Playwright does expose lower-level mouse APIs that <em>can</em> generate intermediate moves:</p>
+        <ul class="mt-2 list-disc space-y-1 pl-5">
+          <li><code>page.mouse.move(x, y, { steps: 30 })</code> emits 30 intermediate <code>mousemove</code> events along a straight line.</li>
+          <li>Wrap that in a Bezier-curve helper with randomized jitter and you produce trajectories with the right shape and curvature.</li>
+          <li><code>page.keyboard.type(text, { delay: rand(80, 200) })</code> dispatches one key at a time with randomized inter-key delays.</li>
+        </ul>
+        <p class="mt-2">The catch: every interaction in the test suite needs this treatment. A one-line <code>page.click()</code> becomes a thirty-line "humanize" helper. And advanced behavioural fingerprinting (used by serious bot-detection vendors) trains ML models on real human mouse telemetry — they pick up on acceleration curves, overshoot-and-correct patterns, pause-before-click latency, and dozens of other features that synthetic Bezier curves don't replicate. So: bypassable here, in this demo. Increasingly hard against production-grade defenders.</p>
+      `,
+    },
     aiva: {
       passes: true,
       notes: `
@@ -160,6 +199,20 @@ const levels: LevelReport[] = [
       workaround:
         'A VNC session runs on a real machine with a real graphics stack and a real set of fonts. The fingerprints it produces match those of millions of other real desktop Chrome installations.',
     },
+    playwright: {
+      notes: `
+        <p><strong>Verdict: effectively impossible to fix from inside Playwright without a real GPU and real fonts.</strong></p>
+        <p class="mt-2">Every individual fingerprint <em>can</em> be spoofed with an <code>addInitScript</code> hook:</p>
+        <ul class="mt-2 list-disc space-y-1 pl-5">
+          <li>Override <code>WebGLRenderingContext.prototype.getParameter</code> to return a fake renderer string like "Intel Iris Xe Graphics".</li>
+          <li>Patch <code>HTMLCanvasElement.prototype.toDataURL</code> and <code>getImageData</code> to return a pre-computed "real GPU" hash.</li>
+          <li>Replace <code>OfflineAudioContext.prototype.startRendering</code> to return a pre-recorded waveform.</li>
+          <li>Spoof <code>document.fonts.check</code> and the font-width measurement trick to claim the right font set.</li>
+        </ul>
+        <p class="mt-2">The trap: <strong>internal consistency</strong>. If you claim "Intel Iris Xe Graphics" for WebGL, your canvas pixel hash needs to match what an actual Intel iGPU produces — and that hash depends on subtle floating-point rounding, anti-aliasing kernels, and driver-specific quirks. Without the actual hardware you cannot reproduce it. Detection services maintain databases of <em>valid combinations</em>: GPU X must produce canvas hash within set Y for fonts Z. Spoofing one signal in isolation creates a contradiction with the others, which is itself a stronger signal than the original tell.</p>
+        <p class="mt-2">This is where Playwright fundamentally loses against any site doing real fingerprint-based bot detection.</p>
+      `,
+    },
     aiva: {
       passes: true,
       notes: `
@@ -182,6 +235,21 @@ const levels: LevelReport[] = [
         'Cloudflare Turnstile is the modern, invisible replacement for "click all the bicycle pictures" CAPTCHAs. When a page asks for it, Turnstile silently runs all the kinds of checks the previous four levels illustrate — plus an additional stack of private signals only Cloudflare knows about — and decides whether the visitor looks human enough to be issued a one-time "yes, this is a human" token. For automated browsers it simply refuses to issue the token. The server-side login check then sees no token and rejects the submission before it ever reaches the application code.',
       workaround:
         'A real Chrome session with a real fingerprint, real interaction history, and real mouse movement looks like any other paying customer to Turnstile. The token gets issued silently, exactly the same way it would for someone working from a coffee-shop laptop.',
+    },
+    playwright: {
+      notes: `
+        <p><strong>Verdict: functionally impossible to bypass from inside Playwright. The only working "fix" is to outsource the problem.</strong></p>
+        <p class="mt-2">Turnstile's logic is intentionally closed-source. It runs every kind of signal the previous four levels illustrate, plus a stack of private checks Cloudflare keeps to itself, plus IP reputation, plus behavioural analysis trained on the firehose of real human traffic across the Cloudflare network. Even a Playwright author who perfectly fixed levels 1-4, ran from a residential IP, and hand-rolled humanized interactions would still be classified as automated with high confidence — Cloudflare's behavioural model is too good.</p>
+        <p class="mt-2">The "solution" used in the wild is paid CAPTCHA-solver services (2Captcha, anti-captcha, CapMonster, etc.). They route the challenge through real-browser farms — either real humans or sophisticated stealth setups — and return a valid token in a few seconds, for a few cents each. Wire one of those into your test:</p>
+        <pre class="mt-2 overflow-x-auto rounded bg-slate-900 p-3 font-mono text-[11px] leading-relaxed text-slate-100">const token = await solver.solveTurnstile({
+  sitekey: '0x4AAAAAADOBZMoei4aG9CNO',
+  url: 'https://bot-arena.jhero.app/level/5/',
+});
+await page.evaluate((t) =&gt; {
+  document.querySelector('input[name="cf-turnstile-response"]').value = t;
+}, token);</pre>
+        <p class="mt-2">This works — but it has defeated the original purpose of using Playwright. You have paid a third-party service to act as the human in front of the human-detector. Your "automated" tests now have a per-run cost and a human-in-the-loop dependency. This is exactly the kind of corner that VNC-AIVA, by being a real browser session at the OS level, avoids without any third-party dependency.</p>
+      `,
     },
     aiva: {
       passes: false,
@@ -311,6 +379,14 @@ const totalFails = levels.reduce((acc, l) => acc + l.signals.filter((s) => s.sta
                   <p set:html={lvl.layman.workaround} />
                 </div>
               </div>
+            </details>
+
+            <details class="group mt-4 rounded-lg bg-rose-50 p-4 ring-1 ring-rose-200">
+              <summary class="cursor-pointer text-sm font-semibold text-rose-900">
+                Playwright context — could this test be fixed in Playwright?
+                <span class="ml-1 text-xs font-normal text-rose-700 group-open:hidden">(click to expand)</span>
+              </summary>
+              <div class="mt-4 space-y-3 text-sm leading-relaxed text-rose-950" set:html={lvl.playwright.notes} />
             </details>
 
             <details class={`group mt-4 rounded-lg p-4 ring-1 ${lvl.aiva.passes ? 'bg-emerald-50 ring-emerald-200' : 'bg-amber-50 ring-amber-200'}`}>
