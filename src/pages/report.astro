@@ -20,16 +20,18 @@ interface LevelReport {
     workaround: string;
   };
   playwright: {
+    difficulty: 1 | 2 | 3 | 4 | 5;
+    label: string;
     notes: string; // HTML allowed
   };
   aiva: {
     passes: boolean;
-    fix?: {
+    fixes?: Array<{
       difficulty: 1 | 2 | 3 | 4 | 5;
       label: string;
       tags: string[];
       estimate: string;
-    };
+    }>;
     notes: string; // HTML allowed
   };
 }
@@ -70,6 +72,8 @@ const levels: LevelReport[] = [
         'The browser inside a VNC session is a regular, fully-fledged Chrome that a regular user started. Nothing is automating it from the inside — the automation happens <em>outside</em> the browser, at the operating-system level, by moving a mouse and pressing keys on a remote desktop. The browser does not know it is being driven, so none of these flags get set, and it reports back the same values any real human visitor would.',
     },
     playwright: {
+      difficulty: 2,
+      label: 'Stealth-plugin arms race',
       notes: `
         <p><strong>Verdict: technically patchable, but it's an arms race that the page always wins eventually.</strong></p>
         <p class="mt-2">Each of the five remaining signals can in principle be spoofed from Playwright:</p>
@@ -83,12 +87,20 @@ const levels: LevelReport[] = [
     },
     aiva: {
       passes: false,
-      fix: {
-        difficulty: 1,
-        label: 'Trivial with an init script',
-        tags: ['5-line patch in browser.ts', 'No architectural change'],
-        estimate: '~30 minutes (vibe-codable in one prompt)',
-      },
+      fixes: [
+        {
+          difficulty: 1,
+          label: 'Practical — init-script patch',
+          tags: ['5-line patch in browser.ts', 'No architectural change', 'Vibe-codable'],
+          estimate: '~30 minutes',
+        },
+        {
+          difficulty: 5,
+          label: 'Clean — replace Puppeteer / CDP',
+          tags: ['Rewrite control plane', 'X11/uinput steering', 'No CDP attached'],
+          estimate: 'Multi-week refactor',
+        },
+      ],
       notes: `
         <p><strong>AIVA fails this level because of one signal: <code>navigator.webdriver = true</code>.</strong> AIVA launches Chrome via Puppeteer in <code>aiva-node/src/control-server/src/browser.ts:204</code> (<code>puppeteer.launch({...})</code>), and any browser attached via CDP has this flag set automatically by Chrome itself.</p>
         <p class="mt-3"><strong>The pragmatic fix is a single init script.</strong> Add this to AIVA's page-setup flow (e.g., next to the existing <code>hideCursorScript</code> wiring):</p>
@@ -123,6 +135,8 @@ const levels: LevelReport[] = [
         'A VNC session streams a real, fully visible Chrome window running on a real desktop. There are real toolbars, a real taskbar, real OS chrome. Every measurement the page makes returns the same numbers any human visitor on any laptop would produce. Crucially, the automation happens <em>outside</em> the browser (at the OS level, moving a real cursor) — no CDP is attached, so Chrome behaves like an ordinary Chrome being used by an ordinary person.',
     },
     playwright: {
+      difficulty: 3,
+      label: 'Partial — script signals only',
       notes: `
         <p><strong>Verdict: partially patchable in script; the pixel measurements require effectively rebuilding what VNC-AIVA already is.</strong></p>
         <p class="mt-2">The JavaScript-level signals (<code>chrome.app</code>, <code>chrome.csi</code>, driver shims, toString integrity) can be polyfilled with an <code>addInitScript</code> at page load. Easy.</p>
@@ -136,12 +150,14 @@ const levels: LevelReport[] = [
     },
     aiva: {
       passes: false,
-      fix: {
-        difficulty: 2,
-        label: 'Easy',
-        tags: ['Config: drop 2 flags', 'Image: add desktop env'],
-        estimate: 'Half a day',
-      },
+      fixes: [
+        {
+          difficulty: 2,
+          label: 'Easy — drop 2 flags + add desktop env',
+          tags: ['Config: drop 2 flags', 'Image: add desktop env'],
+          estimate: 'Half a day',
+        },
+      ],
       notes: `
         <p><strong>AIVA currently fails this level for two reasons:</strong></p>
         <ol class="mt-2 list-decimal space-y-2 pl-5">
@@ -181,6 +197,8 @@ const levels: LevelReport[] = [
         'A VNC operator moves a real mouse cursor on a real operating system, generating the same continuous stream of mouse events any human would. Because the path is a <em>physical</em> movement (the cursor is dragged across the screen by a person or by image-recognition automation steering it), it has the same natural variation and curvature as any other user\'s.',
     },
     playwright: {
+      difficulty: 3,
+      label: 'Humanize every interaction',
       notes: `
         <p><strong>Verdict: bypassable for the basic checks Bot Arena does, but only by hand-rolling humanized interactions everywhere — and any sophisticated behavioural model still wins.</strong></p>
         <p class="mt-2">Playwright does expose lower-level mouse APIs that <em>can</em> generate intermediate moves:</p>
@@ -218,6 +236,8 @@ const levels: LevelReport[] = [
         'A VNC session runs on a real machine with a real graphics stack and a real set of fonts. The fingerprints it produces match those of millions of other real desktop Chrome installations.',
     },
     playwright: {
+      difficulty: 4,
+      label: 'Needs real GPU for consistency',
       notes: `
         <p><strong>Verdict: effectively impossible to fix from inside Playwright without a real GPU and real fonts.</strong></p>
         <p class="mt-2">Every individual fingerprint <em>can</em> be spoofed with an <code>addInitScript</code> hook:</p>
@@ -233,12 +253,14 @@ const levels: LevelReport[] = [
     },
     aiva: {
       passes: true,
-      fix: {
-        difficulty: 1,
-        label: 'Trivial (hardening, not required)',
-        tags: ['Config: drop 3 flags', 'Operational: harvest denylist hashes'],
-        estimate: 'A few hours, only if hardening is desired',
-      },
+      fixes: [
+        {
+          difficulty: 1,
+          label: 'Trivial — hardening (not required)',
+          tags: ['Config: drop 3 flags', 'Operational: harvest denylist hashes'],
+          estimate: 'A few hours, only if hardening is desired',
+        },
+      ],
       notes: `
         <p><strong>AIVA passes this level — but partially by accident.</strong> AIVA's <code>browserArgs.ts</code> includes <code>--disable-gpu</code>, <code>--disable-webgl</code>, and <code>--disable-features=Vulkan,webgpu</code>, which make the WebGL renderer query return nothing. Bot Arena reports an empty renderer as <code>INFO</code> rather than <code>FAIL</code>, so AIVA slips past. Canvas, audio, and font fingerprints come from a real Linux Chrome on a real machine and look like any other desktop user.</p>
         <p class="mt-2"><strong>Latent risk:</strong> if Bot Arena's canvas/audio denylists in <code>src/detections/level4.ts</code> were populated with hashes harvested from AIVA's Chrome (which is the operational follow-up flagged in the implementation plan), this level would fail for AIVA too. Long-term, AIVA should consider whether <code>--disable-gpu</code>/<code>--disable-webgl</code> are still needed — they're a tell to fingerprint-aware sites because most real Chromes do have GPU.</p>
@@ -261,6 +283,8 @@ const levels: LevelReport[] = [
         'A real Chrome session with a real fingerprint, real interaction history, and real mouse movement looks like any other paying customer to Turnstile. The token gets issued silently, exactly the same way it would for someone working from a coffee-shop laptop.',
     },
     playwright: {
+      difficulty: 5,
+      label: 'Impossible without 3rd-party solver',
       notes: `
         <p><strong>Verdict: functionally impossible to bypass from inside Playwright. The only working "fix" is to outsource the problem.</strong></p>
         <p class="mt-2">Turnstile's logic is intentionally closed-source. It runs every kind of signal the previous four levels illustrate, plus a stack of private checks Cloudflare keeps to itself, plus IP reputation, plus behavioural analysis trained on the firehose of real human traffic across the Cloudflare network. Even a Playwright author who perfectly fixed levels 1-4, ran from a residential IP, and hand-rolled humanized interactions would still be classified as automated with high confidence — Cloudflare's behavioural model is too good.</p>
@@ -277,12 +301,14 @@ await page.evaluate((t) =&gt; {
     },
     aiva: {
       passes: false,
-      fix: {
-        difficulty: 4,
-        label: 'Hard — partially externally-bound',
-        tags: ['Blocked on L1', 'Blocked on L2', 'Residential IP infrastructure'],
-        estimate: 'Inherits L1 + infra work; Cloudflare ML remains uncertain',
-      },
+      fixes: [
+        {
+          difficulty: 4,
+          label: 'Hard — partially externally-bound',
+          tags: ['Blocked on L1', 'Blocked on L2', 'Residential IP infrastructure'],
+          estimate: 'Inherits L1 + infra work; Cloudflare ML remains uncertain',
+        },
+      ],
       notes: `
         <p><strong>AIVA currently fails this level as a cascading consequence of L1 and L2.</strong> Cloudflare Turnstile silently runs many of the same signals — <code>navigator.webdriver</code>, browser-chrome dimensions, fingerprint plausibility — plus its own private checks, plus IP reputation. Two contributing causes inside AIVA's control:</p>
         <ol class="mt-2 list-decimal space-y-2 pl-5">
@@ -328,7 +354,12 @@ function fixStyles(difficulty: number) {
 
 const levelData = levels.map((lvl) => ({
   ...lvl,
-  fixViz: lvl.aiva.fix ? fixStyles(lvl.aiva.fix.difficulty) : null,
+  playwrightViz: fixStyles(lvl.playwright.difficulty),
+  aivaFixesViz:
+    lvl.aiva.fixes?.map((f) => ({
+      ...f,
+      viz: fixStyles(f.difficulty),
+    })) ?? null,
 }));
 ---
 <html lang="en">
@@ -447,45 +478,81 @@ const levelData = levels.map((lvl) => ({
             </details>
 
             <details class="group mt-4 rounded-lg bg-rose-50 p-4 ring-1 ring-rose-200">
-              <summary class="cursor-pointer text-sm font-semibold text-rose-900">
-                Playwright context — could this test be fixed in Playwright?
-                <span class="ml-1 text-xs font-normal text-rose-700 group-open:hidden">(click to expand)</span>
+              <summary class="flex flex-wrap items-center gap-2 cursor-pointer text-sm font-semibold text-rose-900">
+                <span>Playwright context — could this test be fixed in Playwright?</span>
+                <span class="text-xs font-normal text-rose-700 group-open:hidden">(click to expand)</span>
+                <span class="ml-auto inline-flex items-center gap-1.5">
+                  <span class="flex gap-0.5">
+                    {lvl.playwrightViz.dotClasses.map((cls) => (
+                      <span class={`h-2 w-2 rounded-full ${cls}`} />
+                    ))}
+                  </span>
+                  <span class={`text-[10px] font-semibold uppercase tracking-wide ${lvl.playwrightViz.labelColor}`}>
+                    {lvl.playwright.difficulty}/5 · {lvl.playwright.label}
+                  </span>
+                </span>
               </summary>
               <div class="mt-4 space-y-3 text-sm leading-relaxed text-rose-950" set:html={lvl.playwright.notes} />
             </details>
 
             <details class={`group mt-4 rounded-lg p-4 ring-1 ${lvl.aiva.passes ? 'bg-emerald-50 ring-emerald-200' : 'bg-amber-50 ring-amber-200'}`}>
-              <summary class={`cursor-pointer text-sm font-semibold ${lvl.aiva.passes ? 'text-emerald-900' : 'text-amber-900'}`}>
-                AIVA context — {lvl.aiva.passes ? 'why this level already passes for AIVA' : 'what would need to change in AIVA to pass this'}
-                <span class={`ml-1 text-xs font-normal group-open:hidden ${lvl.aiva.passes ? 'text-emerald-700' : 'text-amber-700'}`}>(click to expand)</span>
-              </summary>
-
-              {lvl.aiva.fix && lvl.fixViz && (
-                <div class="mt-4 rounded-lg bg-white/70 p-4 ring-1 ring-slate-200">
-                  <div class="flex flex-wrap items-center gap-x-4 gap-y-2">
-                    <div class="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
-                      Fix complexity
-                    </div>
-                    <div class="flex items-center gap-1.5">
-                      {lvl.fixViz.dotClasses.map((cls) => (
-                        <span class={`h-3 w-3 rounded-full ${cls}`} />
-                      ))}
-                      <span class="ml-1 text-xs text-slate-500">{lvl.aiva.fix.difficulty}/5</span>
-                    </div>
-                    <div class={`text-base font-bold ${lvl.fixViz.labelColor}`}>{lvl.aiva.fix.label}</div>
-                    <div class="ml-auto text-xs italic text-slate-600">{lvl.aiva.fix.estimate}</div>
-                  </div>
-                  <div class="mt-3 flex flex-wrap gap-2">
-                    {lvl.aiva.fix.tags.map((tag) => (
-                      <span class="rounded-full bg-white px-2.5 py-0.5 text-xs font-medium text-slate-700 ring-1 ring-slate-300">
-                        {tag}
+              <summary class={`flex flex-wrap items-center gap-2 cursor-pointer text-sm font-semibold ${lvl.aiva.passes ? 'text-emerald-900' : 'text-amber-900'}`}>
+                <span>AIVA context — {lvl.aiva.passes ? 'why this level already passes for AIVA' : 'what would need to change in AIVA to pass this'}</span>
+                <span class={`text-xs font-normal group-open:hidden ${lvl.aiva.passes ? 'text-emerald-700' : 'text-amber-700'}`}>(click to expand)</span>
+                {lvl.aivaFixesViz ? (
+                  <span class="ml-auto inline-flex flex-wrap items-center gap-3">
+                    {lvl.aivaFixesViz.map((fix) => (
+                      <span class="inline-flex items-center gap-1.5">
+                        <span class="flex gap-0.5">
+                          {fix.viz.dotClasses.map((cls) => (
+                            <span class={`h-2 w-2 rounded-full ${cls}`} />
+                          ))}
+                        </span>
+                        <span class={`text-[10px] font-semibold uppercase tracking-wide ${fix.viz.labelColor}`}>
+                          {fix.difficulty}/5
+                        </span>
                       </span>
                     ))}
-                  </div>
+                  </span>
+                ) : (
+                  <span class="ml-auto inline-flex items-center gap-1.5">
+                    <span class="text-[10px] font-semibold uppercase tracking-wide text-emerald-800">
+                      ✓ passes natively
+                    </span>
+                  </span>
+                )}
+              </summary>
+
+              {lvl.aivaFixesViz && lvl.aivaFixesViz.length > 0 && (
+                <div class="mt-4 space-y-3">
+                  {lvl.aivaFixesViz.map((fix, idx) => (
+                    <div class="rounded-lg bg-white/70 p-4 ring-1 ring-slate-200">
+                      <div class="flex flex-wrap items-center gap-x-4 gap-y-2">
+                        <div class="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                          {lvl.aivaFixesViz!.length > 1 ? `Path ${idx + 1}` : 'Fix complexity'}
+                        </div>
+                        <div class="flex items-center gap-1.5">
+                          {fix.viz.dotClasses.map((cls) => (
+                            <span class={`h-3 w-3 rounded-full ${cls}`} />
+                          ))}
+                          <span class="ml-1 text-xs text-slate-500">{fix.difficulty}/5</span>
+                        </div>
+                        <div class={`text-base font-bold ${fix.viz.labelColor}`}>{fix.label}</div>
+                        <div class="ml-auto text-xs italic text-slate-600">{fix.estimate}</div>
+                      </div>
+                      <div class="mt-3 flex flex-wrap gap-2">
+                        {fix.tags.map((tag) => (
+                          <span class="rounded-full bg-white px-2.5 py-0.5 text-xs font-medium text-slate-700 ring-1 ring-slate-300">
+                            {tag}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
                 </div>
               )}
 
-              {lvl.aiva.passes && !lvl.aiva.fix && (
+              {lvl.aiva.passes && !lvl.aivaFixesViz && (
                 <div class="mt-4 inline-flex items-center gap-2 rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-900">
                   ✓ No fix needed — passes by construction
                 </div>
