@@ -4,6 +4,7 @@ import cloudflare from '@astrojs/cloudflare';
 
 export default defineConfig({
   output: 'static',
+  adapter: cloudflare(),
   integrations: [preact()],
   site: 'https://jhero.app',
 });
