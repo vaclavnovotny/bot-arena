@@ -3,16 +3,17 @@ import '../styles/global.css';
 import { DetectionLog } from './DetectionLog';
 
 interface Props {
-  levelNumber: 1 | 2 | 3 | 4 | 5;
+  levelNumber: 1 | 2 | 3 | 4 | 5 | 6 | 7;
   title: string;
   summary: string;
   measured: string; // plain-language "what's measured" content
 }
 
 const { levelNumber, title, summary, measured } = Astro.props;
+const sectionName = levelNumber <= 5 ? 'Bot detection' : 'Selector resistance';
 const prev = levelNumber > 1 ? `/level/${levelNumber - 1}` : '/';
-const next = levelNumber < 5 ? `/level/${levelNumber + 1}` : '/about';
-const nextLabel = levelNumber < 5 ? `Level ${levelNumber + 1} →` : 'About →';
+const next = levelNumber < 7 ? `/level/${levelNumber + 1}` : '/about';
+const nextLabel = levelNumber < 7 ? `Level ${levelNumber + 1} →` : 'About →';
 ---
 <html lang="en">
   <head>
@@ -68,8 +69,9 @@ const nextLabel = levelNumber < 5 ? `Level ${levelNumber + 1} →` : 'About →'
 
     <main class="mx-auto flex max-w-6xl gap-8 px-6 py-10">
       <section class="flex-1">
-        <div class="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-500">
-          Level {levelNumber} of 5
+        <div class="mb-1 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
+          <span class="rounded-full bg-slate-200 px-2 py-0.5 text-[10px] text-slate-700">{sectionName}</span>
+          <span>· Level {levelNumber}</span>
         </div>
         <h1 class="text-3xl font-bold tracking-tight">{title}</h1>
         <p class="mt-2 max-w-2xl text-slate-600">{summary}</p>

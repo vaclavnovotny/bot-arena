@@ -1,12 +1,26 @@
 ---
 import '../styles/global.css';
 
-const levels = [
-  { n: 1, name: 'The honest tell', blurb: 'navigator.webdriver, missing chrome.runtime, headless UA hints.' },
-  { n: 2, name: 'CDP attached', blurb: 'Driver-shim artefacts and toString/Error.stack integrity checks.' },
-  { n: 3, name: 'Mouse trajectory', blurb: 'Mousemove density, click curvature, keystroke cadence.' },
-  { n: 4, name: 'Fingerprint battery', blurb: 'Canvas, audio, font, and WebGL signals.' },
-  { n: 5, name: 'Cloudflare Turnstile', blurb: 'Managed-mode widget with server-side verification.' },
+const sections = [
+  {
+    name: 'Bot detection',
+    description: 'The site detects automation through fingerprinting, behavioural signals, or third-party challenge.',
+    levels: [
+      { n: 1, name: 'The honest tell', blurb: 'navigator.webdriver and other passive Chrome flags.' },
+      { n: 2, name: 'CDP attached', blurb: 'Headless-window shape, missing chrome.app / chrome.csi.' },
+      { n: 3, name: 'Mouse trajectory', blurb: 'Mousemove density, click curvature, keystroke cadence.' },
+      { n: 4, name: 'Fingerprint battery', blurb: 'Canvas, audio, font, and WebGL signals.' },
+      { n: 5, name: 'Cloudflare Turnstile', blurb: 'Managed-mode widget with server-side verification.' },
+    ],
+  },
+  {
+    name: 'Selector resistance',
+    description: 'The DOM that selector-based automation depends on is absent or randomised.',
+    levels: [
+      { n: 6, name: 'Canvas-rendered login', blurb: 'No DOM form — pixels only on a <canvas>.' },
+      { n: 7, name: 'Dynamic selectors', blurb: 'Real form, but every id/name/class rerolls per request.' },
+    ],
+  },
 ];
 ---
 <html lang="en">
@@ -15,7 +29,7 @@ const levels = [
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <title>Bot Arena — anti-bot detection demo</title>
-    <meta name="description" content="Five layered anti-bot detections, live Detection Log, real Cloudflare Turnstile. A demo target for browser automation." />
+    <meta name="description" content="Seven levels in two sections: five anti-bot detections, plus two selector-resistant rendering tricks. A demo target for browser automation." />
   </head>
   <body class="min-h-screen bg-slate-50 text-slate-900">
     <header class="border-b border-slate-200 bg-white">
@@ -33,10 +47,10 @@ const levels = [
     <main class="mx-auto max-w-4xl px-6 py-16">
       <p class="text-xs font-semibold uppercase tracking-widest text-slate-500">A live demo</p>
       <h1 class="mt-2 text-4xl font-bold tracking-tight sm:text-5xl">
-        Five layers of bot detection. Watch them fire.
+        Where automation gets caught — or can't even try.
       </h1>
       <p class="mt-4 max-w-2xl text-lg text-slate-600">
-        Point your favourite browser-automation tool at any level. The Detection Log on the right shows, in real time, exactly which signals you tripped.
+        Two sections, seven levels. The first five are about <strong>detection</strong> — the site sees you and refuses. The last two are about <strong>capability</strong> — selector-based automation cannot interact with what it cannot find.
       </p>
 
       <div class="mt-8 flex flex-wrap gap-3">
@@ -60,19 +74,27 @@ const levels = [
         </a>
       </div>
 
-      <ol class="mt-14 grid gap-4 sm:grid-cols-2">
-        {levels.map((l) => (
-          <li class="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-            <a href={`/level/${l.n}`} class="block">
-              <div class="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                Level {l.n}
-              </div>
-              <div class="mt-1 text-lg font-semibold text-slate-900">{l.name}</div>
-              <p class="mt-1 text-sm text-slate-600">{l.blurb}</p>
-            </a>
-          </li>
+      <div class="mt-14 space-y-12">
+        {sections.map((s) => (
+          <section>
+            <h2 class="text-xs font-semibold uppercase tracking-widest text-slate-500">{s.name}</h2>
+            <p class="mt-1 max-w-2xl text-sm text-slate-600">{s.description}</p>
+            <ol class="mt-4 grid gap-4 sm:grid-cols-2">
+              {s.levels.map((l) => (
+                <li class="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+                  <a href={`/level/${l.n}/`} class="block">
+                    <div class="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                      Level {l.n}
+                    </div>
+                    <div class="mt-1 text-lg font-semibold text-slate-900">{l.name}</div>
+                    <p class="mt-1 text-sm text-slate-600" set:html={l.blurb} />
+                  </a>
+                </li>
+              ))}
+            </ol>
+          </section>
         ))}
-      </ol>
+      </div>
     </main>
 
     <footer class="border-t border-slate-200 py-6 text-center text-xs text-slate-500">

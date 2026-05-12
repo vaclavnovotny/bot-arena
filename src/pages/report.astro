@@ -10,6 +10,7 @@ interface Signal {
 
 interface LevelReport {
   n: number;
+  section: 'Bot detection' | 'Selector resistance';
   title: string;
   family: string;
   testCode: string;
@@ -51,9 +52,16 @@ Expected: visible
 Received: hidden
 Timeout:  5000ms`;
 
+const selectorFailure = `Error: locator.fill: Test timeout of 30000ms exceeded.
+
+Call log:
+  - waiting for getByLabel('Email')
+  - locator resolved to <no element matched>`;
+
 const levels: LevelReport[] = [
   {
     n: 1,
+    section: 'Bot detection',
     title: 'The honest tell',
     family: 'Passive webdriver flags',
     testCode: sharedTest(1),
@@ -117,6 +125,7 @@ const levels: LevelReport[] = [
   },
   {
     n: 2,
+    section: 'Bot detection',
     title: 'CDP attached',
     family: 'Headless / CDP-only tells',
     testCode: sharedTest(2),
@@ -181,6 +190,7 @@ const levels: LevelReport[] = [
   },
   {
     n: 3,
+    section: 'Bot detection',
     title: 'Mouse trajectory',
     family: 'Behavioural — mouse path and keystroke cadence',
     testCode: sharedTest(3),
@@ -219,6 +229,7 @@ const levels: LevelReport[] = [
   },
   {
     n: 4,
+    section: 'Bot detection',
     title: 'Fingerprint battery',
     family: 'Canvas, audio, WebGL renderer, font set',
     testCode: sharedTest(4),
@@ -269,6 +280,7 @@ const levels: LevelReport[] = [
   },
   {
     n: 5,
+    section: 'Bot detection',
     title: 'Cloudflare Turnstile',
     family: 'Real third-party challenge',
     testCode: sharedTest(5),
@@ -323,6 +335,95 @@ await page.evaluate((t) =&gt; {
       `,
     },
   },
+  {
+    n: 6,
+    section: 'Selector resistance',
+    title: 'Canvas-rendered login',
+    family: 'No DOM to query — pixels only',
+    testCode: sharedTest(6),
+    failureMessage: selectorFailure,
+    signals: [
+      { status: 'info', id: 'no-dom', detail: 'Only one DOM element exists in the form region: a <canvas>. No <input>, no <button>, no <label>.' },
+      { status: 'fail', id: 'getByLabel-email', detail: "page.getByLabel('Email') — locator resolved to <no element matched>" },
+      { status: 'fail', id: 'getByLabel-password', detail: "page.getByLabel('Password') — locator resolved to <no element matched>" },
+      { status: 'fail', id: 'getByRole-button', detail: "page.getByRole('button', { name: 'Sign in' }) — locator resolved to <no element matched>" },
+    ],
+    layman: {
+      problem:
+        'A small but growing class of web apps draws their entire user interface inside a single <code>&lt;canvas&gt;</code> element — Figma, Google Sheets, Photoshop Web, web games. The browser sees one big rectangular pixel buffer; everything inside it (text, buttons, input boxes) is just paint. There is no DOM tree to walk, no element to grab, no label to query. A selector-based automation tool literally has nothing to interact with.',
+      workaround:
+        'An image-aware automation tool — like the classic AIVA — does not look at the DOM at all. It looks at the rendered pixels, recognises the visible "Email" text and the box right under it, and clicks at those coordinates. It then types using OS-level keystrokes, which the canvas receives as ordinary keyboard events. The DOM\'s absence is irrelevant; the pixels are the contract.',
+    },
+    playwright: {
+      difficulty: 5,
+      label: 'Impossible without external vision',
+      notes: `
+        <p><strong>Verdict: impossible with selector-based Playwright. The DOM is empty of anything to query.</strong></p>
+        <p class="mt-2">Playwright's locator APIs all resolve to nothing here:</p>
+        <ul class="mt-2 list-disc space-y-1 pl-5">
+          <li><code>page.getByLabel('Email')</code> — no <code>&lt;label&gt;</code> element exists.</li>
+          <li><code>page.getByRole('textbox')</code> — no <code>&lt;input&gt;</code> element exists.</li>
+          <li><code>page.getByText('Sign in')</code> — the text "Sign in" is painted pixels, not a text node.</li>
+        </ul>
+        <p class="mt-2">The only theoretical path is to take a screenshot from Playwright, pass it to an external OCR / template-matching pipeline to find UI elements visually, then use <code>page.mouse.click(x, y)</code> at the resolved coordinates and <code>page.keyboard.type(...)</code> to fill them. At that point you have built a worse version of the classic AIVA — and you've moved the actual automation outside Playwright entirely.</p>
+        <p class="mt-2">There is no Playwright-native way to interact with canvas-rendered UIs. This is a structural mismatch between the tool and the target, not an arms race over signals.</p>
+      `,
+    },
+    aiva: {
+      passes: true,
+      notes: `
+        <p><strong>AIVA passes this level natively.</strong> AIVA's automation model is image-based from the ground up: it screenshots the visible browser surface, identifies UI elements by what they look like, and dispatches OS-level mouse and keyboard events at the right coordinates. The DOM is incidental — AIVA never touched it on the way in, so it does not matter that there is no DOM to touch here.</p>
+        <p class="mt-2">This level is the strongest single argument for pixel-based automation as a category. Selector-based tools are not just <em>blocked</em> here — they are <em>structurally unable</em> to attempt the task at all.</p>
+      `,
+    },
+  },
+  {
+    n: 7,
+    section: 'Selector resistance',
+    title: 'Dynamic selectors',
+    family: 'Real form, randomised identifiers',
+    testCode: sharedTest(7),
+    failureMessage: selectorFailure,
+    signals: [
+      { status: 'info', id: 'form-rendered', detail: 'A real <form> with real <input> elements — but every id/name/class is randomised per request, and there are no <label> elements.' },
+      { status: 'fail', id: 'getByLabel-email', detail: "page.getByLabel('Email') fails — no <label> element associates with the input." },
+      { status: 'pass', id: 'getByRole-button', detail: "page.getByRole('button', { name: 'Sign in' }) works (button text is stable)." },
+      { status: 'info', id: 'fallback-fragility', detail: 'Even structural fallbacks like input:nth-of-type(1) work this run, but break on the next form revision.' },
+    ],
+    layman: {
+      problem:
+        'Modern web apps frequently ship with build-time CSS-in-JS, which produces randomised class names. Some apps go further and randomise every attribute — <code>id</code>, <code>name</code>, <code>class</code>, <code>aria-label</code> — on every page request, and omit <code>&lt;label&gt;</code> elements altogether. A human still reads "Email" off the screen and types in the box below. A test that uses accessibility-based locators sees nothing it can grab — every locator it had hardcoded is now stale.',
+      workaround:
+        'AIVA reads "Email" from the screen pixels and clicks the input it visually identifies as a text box just below the label text. It does not look at attributes; it looks at the rendered shape of the page. Randomising the DOM has no effect on it — the visual layout is what matters.',
+    },
+    playwright: {
+      difficulty: 4,
+      label: 'Brittle workarounds, no stable selector',
+      notes: `
+        <p><strong>Verdict: possible with brittle fallback selectors, but the entire promise of accessibility-based testing is gone.</strong></p>
+        <p class="mt-2">Playwright's normal idioms break:</p>
+        <ul class="mt-2 list-disc space-y-1 pl-5">
+          <li><code>page.getByLabel('Email')</code> — no <code>&lt;label&gt;</code> element exists, so this returns nothing.</li>
+          <li><code>page.getByRole('textbox', { name: 'Email' })</code> — no accessible name, so this returns nothing.</li>
+          <li><code>page.getByPlaceholder('Email')</code> — no <code>placeholder</code>, so this returns nothing.</li>
+        </ul>
+        <p class="mt-2">Possible fallbacks, in increasing brittleness:</p>
+        <ol class="mt-2 list-decimal space-y-1 pl-5">
+          <li><code>page.locator('input[type="email"]')</code> — works this run; breaks if the input type is also randomised, or another email input is added.</li>
+          <li><code>page.locator('input').nth(0)</code> — works this run; breaks the moment the form reorders or grows.</li>
+          <li><code>page.locator('div:has-text("Email") + input')</code> — works for this layout; breaks if the DOM structure is rewritten.</li>
+        </ol>
+        <p class="mt-2">For a truly hostile site, every fallback is one revision away from breaking. The maintenance burden grows linearly with the number of forms; the test suite becomes the single largest source of flakiness in the project.</p>
+      `,
+    },
+    aiva: {
+      passes: true,
+      notes: `
+        <p><strong>AIVA passes this level natively.</strong> AIVA does not look at attributes. It looks at the visible rendering: a label that says "Email", an input box beneath it, a similar pair for "Password", a dark button labelled "Sign in". Randomising the DOM attributes changes nothing about that visual layout — the OCR and template matching find the same targets in the same places.</p>
+        <p class="mt-2">As a category, "selector resistance" is invisible to AIVA by construction. Every visual automation tool — AIVA, image-based RPA platforms, agentic vision models — sits in this same advantage zone.</p>
+      `,
+    },
+  },
 ];
 
 const totalFails = levels.reduce((acc, l) => acc + l.signals.filter((s) => s.status === 'fail').length, 0);
@@ -361,6 +462,25 @@ const levelData = levels.map((lvl) => ({
       viz: fixStyles(f.difficulty),
     })) ?? null,
 }));
+
+const sectionMeta: Record<'Bot detection' | 'Selector resistance', { description: string }> = {
+  'Bot detection': {
+    description:
+      "The site detects automation through fingerprinting, behavioural signals, or third-party challenge. Five levels of increasing sophistication.",
+  },
+  'Selector resistance': {
+    description:
+      "The DOM that selector-based automation depends on is absent or randomised. Playwright fails at the selector step before any signal can fire.",
+  },
+};
+
+const groupedLevels = (
+  ['Bot detection', 'Selector resistance'] as const
+).map((name) => ({
+  name,
+  description: sectionMeta[name].description,
+  items: levelData.filter((l) => l.section === name),
+}));
 ---
 <html lang="en">
   <head>
@@ -389,20 +509,20 @@ const levelData = levels.map((lvl) => ({
       <p class="text-xs font-semibold uppercase tracking-widest text-slate-500">Failure report</p>
       <h1 class="mt-2 text-4xl font-bold tracking-tight">Playwright vs Bot Arena</h1>
       <p class="mt-4 max-w-3xl text-lg text-slate-600">
-        Five plain Playwright tests, one per level. Each one tries to sign in. Every test fails. Below — what each test does, the error Playwright surfaces, and the detection signals that caused the failure.
+        Seven plain Playwright tests, one per level. Each one tries to sign in. Every test fails — for different reasons across two sections. Below: what each test does, the error Playwright surfaces, and either the detection signals that caught it or the structural mismatch that prevented it.
       </p>
 
       <div class="mt-8 grid gap-3 sm:grid-cols-3">
         <div class="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
           <div class="text-xs font-semibold uppercase tracking-wide text-slate-500">Tests run</div>
-          <div class="mt-1 text-3xl font-bold tracking-tight text-slate-900">5</div>
+          <div class="mt-1 text-3xl font-bold tracking-tight text-slate-900">{levels.length}</div>
         </div>
         <div class="rounded-xl border border-rose-200 bg-rose-50 p-5 shadow-sm">
           <div class="text-xs font-semibold uppercase tracking-wide text-rose-700">Failed</div>
-          <div class="mt-1 text-3xl font-bold tracking-tight text-rose-900">5</div>
+          <div class="mt-1 text-3xl font-bold tracking-tight text-rose-900">{levels.length}</div>
         </div>
         <div class="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-          <div class="text-xs font-semibold uppercase tracking-wide text-slate-500">Detections that caught it</div>
+          <div class="text-xs font-semibold uppercase tracking-wide text-slate-500">Signals / mismatches</div>
           <div class="mt-1 text-3xl font-bold tracking-tight text-slate-900">{totalFails}</div>
         </div>
       </div>
@@ -411,8 +531,18 @@ const levelData = levels.map((lvl) => ({
         Headless Chromium driven by <code class="rounded bg-slate-100 px-1 py-0.5">@playwright/test</code> running against <a class="underline hover:text-slate-900" href="https://bot-arena.jhero.app">bot-arena.jhero.app</a>. Source: <a class="underline hover:text-slate-900" href="https://github.com/vaclavnovotny/bot-arena/blob/main/playwright/levels.spec.ts">playwright/levels.spec.ts</a>.
       </p>
 
-      <section class="mt-12 space-y-10">
-        {levelData.map((lvl) => (
+      <div class="mt-12 space-y-16">
+        {groupedLevels.map((group, groupIdx) => (
+          <section>
+            <div class={`flex items-baseline gap-3 ${groupIdx === 0 ? '' : 'border-t border-slate-200 pt-10'}`}>
+              <span class="rounded-full bg-slate-900 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-white">
+                Section {groupIdx + 1}
+              </span>
+              <h2 class="text-2xl font-bold tracking-tight text-slate-900">{group.name}</h2>
+            </div>
+            <p class="mt-2 max-w-3xl text-sm text-slate-600">{group.description}</p>
+            <div class="mt-6 space-y-10">
+        {group.items.map((lvl) => (
           <article id={`level-${lvl.n}`} class="rounded-2xl border border-slate-200 bg-white p-8 shadow-sm">
             <header>
               <div class="flex flex-wrap items-baseline gap-3">
@@ -603,7 +733,7 @@ const levelData = levels.map((lvl) => ({
                   ↑ Previous
                 </a>
               )}
-              {lvl.n < 5 && (
+              {lvl.n < 7 && (
                 <a
                   href={`#level-${lvl.n + 1}`}
                   class="rounded-md border border-slate-300 bg-white px-3 py-1.5 font-medium text-slate-500 hover:bg-slate-50"
@@ -614,15 +744,18 @@ const levelData = levels.map((lvl) => ({
             </div>
           </article>
         ))}
-      </section>
+            </div>
+          </section>
+        ))}
+      </div>
 
       <section class="mt-16 rounded-2xl border border-emerald-200 bg-emerald-50 p-8 shadow-sm">
         <h2 class="text-xl font-bold tracking-tight text-emerald-900">What changes with VNC AIVA</h2>
         <p class="mt-3 max-w-3xl text-sm text-emerald-900">
-          Point the same five tests at the classic AIVA — a real headed Chrome on a Linux host, clicked through VNC at the OS level instead of CDP. None of the signals above fire. Every test passes. The form shows <strong>✓ Access granted</strong> on every level.
+          Point the same seven tests at the classic AIVA — a real headed Chrome on a Linux host, clicked through VNC at the OS level, with image-based recognition instead of selectors. The five detection levels close down to one or two trivial fixes. The two selector-resistant levels are unblocked by construction — pixel-aware automation does not care whether the DOM is empty or randomised.
         </p>
         <p class="mt-3 max-w-3xl text-sm text-emerald-900">
-          The difference is not patches, plugins, or stealth tricks. It's that VNC-AIVA <em>is</em> a real browser session, driven by real OS-level input.
+          The difference is not patches, plugins, or stealth tricks. It is that VNC-AIVA <em>is</em> a real browser session driven by real OS-level input, with image recognition that reads the screen instead of the DOM.
         </p>
       </section>
 

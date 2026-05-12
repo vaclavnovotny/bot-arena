@@ -39,3 +39,19 @@ test('Level 5 sign in', async ({ page }) => {
   await page.getByRole('button', { name: 'Sign in' }).click();
   await expect(page.getByText('Access granted')).toBeVisible();
 });
+
+test('Level 6 sign in', async ({ page }) => {
+  await page.goto('/level/6/');
+  await page.getByLabel('Email').fill('user@example.com');
+  await page.getByLabel('Password').fill('hunter2');
+  await page.getByRole('button', { name: 'Sign in' }).click();
+  await expect(page.getByText('Access granted')).toBeVisible();
+});
+
+test('Level 7 sign in', async ({ page }) => {
+  await page.goto('/level/7/');
+  await page.getByLabel('Email').fill('user@example.com');
+  await page.getByLabel('Password').fill('hunter2');
+  await page.getByRole('button', { name: 'Sign in' }).click();
+  await expect(page.getByText('Access granted')).toBeVisible();
+});
