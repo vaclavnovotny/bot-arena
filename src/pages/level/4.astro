@@ -1,0 +1,26 @@
+---
+import LevelLayout from '../../components/LevelLayout.astro';
+import LoginForm from '../../components/LoginForm.astro';
+
+const measured = `
+- <strong>WebGL renderer</strong> — software rasterisers (SwiftShader, Mesa OffScreen, llvmpipe) are headless tells.
+- <strong>Canvas fingerprint</strong> — hash a rendered string + emoji; compare to a denylist harvested from automated runs.
+- <strong>AudioContext fingerprint</strong> — hash the output of an OscillatorNode → DynamicsCompressor → destination chain.
+- <strong>Font set</strong> — the OS implied by the UA should ship a known set of fonts; mismatched set = suspect.
+`;
+---
+<LevelLayout
+  levelNumber={4}
+  title="Fingerprint battery"
+  summary="Canvas, audio, WebGL, and font signals — each one consistent with a real desktop browser."
+  measured={measured}
+>
+  <LoginForm />
+</LevelLayout>
+
+<script>
+  import { runLevel4 } from '../../detections/level4';
+  const start = () => runLevel4({ window, bus: window.__bus! });
+  start();
+  window.__rerun = start;
+</script>
