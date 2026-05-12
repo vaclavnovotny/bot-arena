@@ -7,6 +7,10 @@ import '../styles/global.css';
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <title>About — Bot Arena</title>
+    <meta
+      name="description"
+      content="What Bot Arena is, how to read the Detection Log, and how to interpret the failure report."
+    />
   </head>
   <body class="min-h-screen bg-slate-50 text-slate-900">
     <header class="border-b border-slate-200 bg-white">
@@ -24,27 +28,94 @@ import '../styles/global.css';
       <h1 class="text-3xl font-bold tracking-tight text-slate-900">About this demo</h1>
 
       <p class="mt-6">
-        Bot Arena is a deliberately-obvious anti-bot target. Each of the five level pages exercises a different family of detection signals that real-world sites use to tell humans from automation.
+        Bot Arena is a deliberately-obvious target for browser automation. It has 13 sign-in pages organised into two sections — every page is built so a stock Playwright test (<code class="rounded bg-slate-100 px-1 py-0.5 text-sm">getByLabel('Email').fill(...)</code>, click Sign in, expect "Access granted") fails for a different, named reason.
       </p>
       <p class="mt-4">
-        The site does not run any automation itself. It's designed to be a target you point your own tool at. The <strong>Detection Log</strong> panel on every level page shows, in real time, every signal the page captured — passed signals in green, failed signals in red — so you can see exactly which checks your tool tripped.
+        The site does not run any automation itself. It is designed to be a target you point your own tool at. The <strong>Detection Log</strong> panel on every page shows, in real time, every signal the page captured — passed signals in green, failed signals in red — so you can see exactly which checks your tool tripped.
       </p>
 
-      <h2 class="mt-12 text-xl font-semibold text-slate-900">Reading the log</h2>
+      <h2 class="mt-12 text-xl font-semibold text-slate-900">The two sections</h2>
+
+      <h3 class="mt-6 text-base font-semibold text-slate-900">
+        Section 1 — <a class="underline" href="/bot-detection/level-1/">Bot detection</a> (5 levels)
+      </h3>
+      <p class="mt-2">
+        The site detects automation through fingerprinting, behavioural signals, or third-party challenge. Levels:
+      </p>
+      <ol class="mt-2 list-decimal space-y-1 pl-5 text-sm">
+        <li><a class="underline hover:text-slate-900" href="/bot-detection/level-1/">The honest tell</a> — webdriver flags, plugins, UA hints.</li>
+        <li><a class="underline hover:text-slate-900" href="/bot-detection/level-2/">CDP attached</a> — browser-chrome shape, missing Chrome surface, taskbar.</li>
+        <li><a class="underline hover:text-slate-900" href="/bot-detection/level-3/">Mouse trajectory</a> — mousemove density and curvature.</li>
+        <li><a class="underline hover:text-slate-900" href="/bot-detection/level-4/">Fingerprint battery</a> — canvas, audio, WebGL, fonts.</li>
+        <li><a class="underline hover:text-slate-900" href="/bot-detection/level-5/">Cloudflare Turnstile</a> — real managed-mode widget.</li>
+      </ol>
+
+      <h3 class="mt-6 text-base font-semibold text-slate-900">
+        Section 2 — <a class="underline" href="/selector-resistance/level-1/">Selector resistance</a> (8 levels)
+      </h3>
+      <p class="mt-2">
+        The DOM that selector-based automation depends on is absent, randomised, sealed, in a different frame, or unreachable without vision. Levels:
+      </p>
+      <ol class="mt-2 list-decimal space-y-1 pl-5 text-sm">
+        <li><a class="underline hover:text-slate-900" href="/selector-resistance/level-1/">Canvas-rendered login</a> — no DOM form; just pixels.</li>
+        <li><a class="underline hover:text-slate-900" href="/selector-resistance/level-2/">Dynamic selectors</a> — every id/name/class rerolls per request.</li>
+        <li><a class="underline hover:text-slate-900" href="/selector-resistance/level-3/">Closed Shadow DOM</a> — form sealed inside a Web Component.</li>
+        <li><a class="underline hover:text-slate-900" href="/selector-resistance/level-4/">Iframe-embedded form</a> — form in a child frame.</li>
+        <li><a class="underline hover:text-slate-900" href="/selector-resistance/level-5/">Slider verification</a> — drag-to-align CAPTCHA.</li>
+        <li><a class="underline hover:text-slate-900" href="/selector-resistance/level-6/">Image-only labels</a> — every label rendered as a graphic.</li>
+        <li><a class="underline hover:text-slate-900" href="/selector-resistance/level-7/">Cross-origin iframe</a> — Stripe/Auth0-style isolation.</li>
+        <li><a class="underline hover:text-slate-900" href="/selector-resistance/level-8/">Virtual scrolling</a> — 1,000-row list, off-screen rows not in DOM.</li>
+      </ol>
+
+      <h2 class="mt-12 text-xl font-semibold text-slate-900">Reading the Detection Log</h2>
       <ul class="mt-3 list-disc space-y-2 pl-5">
-        <li><strong>PASS</strong> means the signal is consistent with a real human in a real browser.</li>
-        <li><strong>FAIL</strong> means the signal is consistent with automation or a headless browser.</li>
-        <li><strong>INFO</strong> is a contextual note that doesn't affect the verdict (e.g. "Turnstile widget mode: interactive").</li>
+        <li><strong>PASS</strong> — the signal is consistent with a real human in a real browser.</li>
+        <li><strong>FAIL</strong> — the signal is consistent with automation, a headless browser, or DOM-resistant rendering.</li>
+        <li><strong>INFO</strong> — a contextual note that does not affect the verdict (e.g., "Turnstile widget mode: interactive", or "Trajectory recorder armed").</li>
         <li>The verdict pill at the top of the log aggregates: any FAIL turns it red.</li>
+      </ul>
+
+      <h2 class="mt-12 text-xl font-semibold text-slate-900">The failure report</h2>
+      <p class="mt-3">
+        The <a class="underline" href="/report">failure report</a> at <code class="rounded bg-slate-100 px-1.5 py-0.5 text-sm">/report</code> is a static dashboard with one card per level. Each card includes:
+      </p>
+      <ul class="mt-3 list-disc space-y-2 pl-5">
+        <li>The exact Playwright code that runs (one shared shape per test).</li>
+        <li>The error Playwright surfaces when it fails — the same message you would see in your own CI.</li>
+        <li>A plain-English explanation of the underlying problem and why a real-browser-over-VNC approach sidesteps it.</li>
+        <li>A <strong>Playwright context</strong> block: what would it take to make this test pass in Playwright? With a 1–5 difficulty meter and the verdict (often: impossible, or maintenance nightmare).</li>
+        <li>An <strong>AIVA context</strong> block: does AIVA currently pass this level? If not, what specific configuration or code change closes the gap? Also with a 1–5 complexity meter.</li>
+        <li>The Detection Log signals that caused the failure.</li>
+      </ul>
+
+      <h2 class="mt-12 text-xl font-semibold text-slate-900">Running the test suite</h2>
+      <p class="mt-3">
+        A Playwright test suite at <code class="rounded bg-slate-100 px-1.5 py-0.5 text-sm">playwright/levels.spec.ts</code> in the repo runs one sign-in test per level against the live site. All 13 tests fail by design — that is the demo. To run it locally:
+      </p>
+      <pre class="mt-3 overflow-x-auto rounded-lg bg-slate-900 p-4 font-mono text-xs leading-relaxed text-slate-100">git clone https://github.com/vaclavnovotny/bot-arena
+cd bot-arena
+npm install
+npx playwright install chromium
+npx playwright test</pre>
+      <p class="mt-3 text-sm text-slate-600">
+        A test passing in the future means a detection technique stopped working, or browser changes lifted a selector-resistance restriction.
+      </p>
+
+      <h2 class="mt-12 text-xl font-semibold text-slate-900">Hosting & stack</h2>
+      <ul class="mt-3 list-disc space-y-2 pl-5">
+        <li><strong>Astro 5</strong> static-first MPA, with one Preact island for the Detection Log.</li>
+        <li><strong>Tailwind CSS v4</strong> via the Vite plugin.</li>
+        <li><strong>Cloudflare Pages</strong> for hosting, plus one Pages Function (<code>/api/turnstile/verify</code>) for the Level 5 token verification.</li>
+        <li><strong>Vitest + happy-dom</strong> for unit tests, <strong>Playwright Test</strong> for the e2e suite.</li>
       </ul>
 
       <h2 class="mt-12 text-xl font-semibold text-slate-900">No tracking</h2>
       <p class="mt-3">
-        The site stores nothing about your visit. The Detection Log lives in browser memory and resets when you reload. The one server endpoint (Level 5's Turnstile verification) calls Cloudflare's <code class="rounded bg-slate-100 px-1.5 py-0.5 text-sm">siteverify</code> API and immediately discards the token.
+        The site stores nothing about your visit. The Detection Log lives in browser memory and resets when you reload. The one server endpoint (Level 5's Turnstile verification) calls Cloudflare's <code class="rounded bg-slate-100 px-1.5 py-0.5 text-sm">siteverify</code> API and immediately discards the token. No analytics, no cookies beyond what Turnstile itself sets.
       </p>
 
       <p class="mt-12 text-sm text-slate-500">
-        Source: <a class="underline" href="https://github.com/vaclavnovotny/bot-arena">github.com/vaclavnovotny/bot-arena</a>
+        Source: <a class="underline" href="https://github.com/vaclavnovotny/bot-arena">github.com/vaclavnovotny/bot-arena</a> — companion to the AIVA automation product at Y Soft.
       </p>
     </main>
   </body>
