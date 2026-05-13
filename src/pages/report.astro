@@ -20,19 +20,35 @@ interface LevelReport {
     problem: string;
     workaround: string;
   };
-  playwright: {
-    difficulty: 1 | 2 | 3 | 4 | 5;
-    label: string;
-    notes: string; // HTML allowed
-  };
+  playwright:
+    | {
+        kind: 'fixable';
+        difficulty: 1 | 2 | 3 | 4 | 5;
+        label: string;
+        notes: string; // HTML allowed
+      }
+    | {
+        kind: 'impossible';
+        label: string;
+        notes: string; // HTML allowed
+      };
   aiva: {
     passes: boolean;
-    fixes?: Array<{
-      difficulty: 1 | 2 | 3 | 4 | 5;
-      label: string;
-      tags: string[];
-      estimate: string;
-    }>;
+    fixes?: Array<
+      | {
+          kind: 'fixable';
+          difficulty: 1 | 2 | 3 | 4 | 5;
+          label: string;
+          tags: string[];
+          estimate: string;
+        }
+      | {
+          kind: 'impossible';
+          label: string;
+          tags: string[];
+          estimate: string;
+        }
+    >;
     notes: string; // HTML allowed
   };
 }
@@ -80,6 +96,7 @@ const levels: LevelReport[] = [
         'The browser inside a VNC session is a regular, fully-fledged Chrome that a regular user started. Nothing is automating it from the inside — the automation happens <em>outside</em> the browser, at the operating-system level, by moving a mouse and pressing keys on a remote desktop. The browser does not know it is being driven, so none of these flags get set, and it reports back the same values any real human visitor would.',
     },
     playwright: {
+      kind: 'fixable',
       difficulty: 2,
       label: 'Stealth-plugin arms race',
       notes: `
@@ -97,12 +114,14 @@ const levels: LevelReport[] = [
       passes: false,
       fixes: [
         {
+          kind: 'fixable',
           difficulty: 1,
           label: 'Practical — init-script patch',
           tags: ['5-line patch in browser.ts', 'No architectural change', 'Vibe-codable'],
           estimate: '~30 minutes',
         },
         {
+          kind: 'fixable',
           difficulty: 5,
           label: 'Clean — replace Puppeteer / CDP',
           tags: ['Rewrite control plane', 'X11/uinput steering', 'No CDP attached'],
@@ -144,6 +163,7 @@ const levels: LevelReport[] = [
         'A VNC session streams a real, fully visible Chrome window running on a real desktop. There are real toolbars, a real taskbar, real OS chrome. Every measurement the page makes returns the same numbers any human visitor on any laptop would produce. Crucially, the automation happens <em>outside</em> the browser (at the OS level, moving a real cursor) — no CDP is attached, so Chrome behaves like an ordinary Chrome being used by an ordinary person.',
     },
     playwright: {
+      kind: 'fixable',
       difficulty: 3,
       label: 'Partial — script signals only',
       notes: `
@@ -161,6 +181,7 @@ const levels: LevelReport[] = [
       passes: false,
       fixes: [
         {
+          kind: 'fixable',
           difficulty: 2,
           label: 'Easy — drop 2 flags + add desktop env',
           tags: ['Config: drop 2 flags', 'Image: add desktop env'],
@@ -207,6 +228,7 @@ const levels: LevelReport[] = [
         'A VNC operator moves a real mouse cursor on a real operating system, generating the same continuous stream of mouse events any human would. Because the path is a <em>physical</em> movement (the cursor is dragged across the screen by a person or by image-recognition automation steering it), it has the same natural variation and curvature as any other user\'s.',
     },
     playwright: {
+      kind: 'fixable',
       difficulty: 3,
       label: 'Humanize every interaction',
       notes: `
@@ -247,7 +269,7 @@ const levels: LevelReport[] = [
         'A VNC session runs on a real machine with a real graphics stack and a real set of fonts. The fingerprints it produces match those of millions of other real desktop Chrome installations.',
     },
     playwright: {
-      difficulty: 4,
+      kind: 'impossible',
       label: 'Needs real GPU for consistency',
       notes: `
         <p><strong>Verdict: effectively impossible to fix from inside Playwright without a real GPU and real fonts.</strong></p>
@@ -266,6 +288,7 @@ const levels: LevelReport[] = [
       passes: true,
       fixes: [
         {
+          kind: 'fixable',
           difficulty: 1,
           label: 'Trivial — hardening (not required)',
           tags: ['Config: drop 3 flags', 'Operational: harvest denylist hashes'],
@@ -295,7 +318,7 @@ const levels: LevelReport[] = [
         'A real Chrome session with a real fingerprint, real interaction history, and real mouse movement looks like any other paying customer to Turnstile. The token gets issued silently, exactly the same way it would for someone working from a coffee-shop laptop.',
     },
     playwright: {
-      difficulty: 5,
+      kind: 'impossible',
       label: 'Impossible without 3rd-party solver',
       notes: `
         <p><strong>Verdict: functionally impossible to bypass from inside Playwright. The only working "fix" is to outsource the problem.</strong></p>
@@ -315,6 +338,7 @@ await page.evaluate((t) =&gt; {
       passes: false,
       fixes: [
         {
+          kind: 'fixable',
           difficulty: 4,
           label: 'Hard — partially externally-bound',
           tags: ['Blocked on L1', 'Blocked on L2', 'Residential IP infrastructure'],
@@ -355,7 +379,7 @@ await page.evaluate((t) =&gt; {
         'An image-aware automation tool — like the classic AIVA — does not look at the DOM at all. It looks at the rendered pixels, recognises the visible "Email" text and the box right under it, and clicks at those coordinates. It then types using OS-level keystrokes, which the canvas receives as ordinary keyboard events. The DOM\'s absence is irrelevant; the pixels are the contract.',
     },
     playwright: {
-      difficulty: 5,
+      kind: 'impossible',
       label: 'Impossible without external vision',
       notes: `
         <p><strong>Verdict: impossible with selector-based Playwright. The DOM is empty of anything to query.</strong></p>
@@ -397,6 +421,7 @@ await page.evaluate((t) =&gt; {
         'AIVA reads "Email" from the screen pixels and clicks the input it visually identifies as a text box just below the label text. It does not look at attributes; it looks at the rendered shape of the page. Randomising the DOM has no effect on it — the visual layout is what matters.',
     },
     playwright: {
+      kind: 'fixable',
       difficulty: 4,
       label: 'Brittle workarounds, no stable selector',
       notes: `
@@ -444,7 +469,7 @@ await page.evaluate((t) =&gt; {
         'A vision-based automation tool screenshots the rendered page and finds the input visually. The DOM privacy boundary is irrelevant — the rendered pixels are public. AIVA reads "Email", finds the box beneath it, clicks, types — exactly like a human looking at the screen. Closed shadow roots make automation harder only for tools that look at the DOM; they make it no harder for tools that look at the screen.',
     },
     playwright: {
-      difficulty: 5,
+      kind: 'impossible',
       label: 'Impossible — closed shadow is opaque',
       notes: `
         <p><strong>Verdict: impossible from inside Playwright. Closed shadow roots are an explicit privacy boundary that Playwright respects.</strong></p>
@@ -486,6 +511,7 @@ await page.evaluate((t) =&gt; {
         'AIVA does not know or care whether a region of the screen comes from the main page or a child frame. The screenshot is one image; the form is one rectangle of pixels; the email box sits below the "Email" text. Vision-based automation traverses frame boundaries for free, because frames are a DOM concept that does not exist in the rendered image.',
     },
     playwright: {
+      kind: 'fixable',
       difficulty: 3,
       label: 'Requires every test to be frame-aware',
       notes: `
@@ -527,7 +553,7 @@ await expect(frame.getByText('Access granted')).toBeVisible();</pre>
         'A vision-based automation tool screenshots the slider, finds the highlighted target zone in the image, computes its X coordinate, and dispatches an OS-level mouse drag to that exact position. The drag is real — the browser receives a real sequence of mousemove events from a real cursor. The slider sees a human-shaped gesture and unlocks the form.',
     },
     playwright: {
-      difficulty: 5,
+      kind: 'impossible',
       label: 'Impossible without external vision',
       notes: `
         <p><strong>Verdict: impossible from inside Playwright. Playwright can drag (mouse.down/move/up at coordinates) but it cannot SEE the target zone.</strong></p>
@@ -543,6 +569,7 @@ await expect(frame.getByText('Access granted')).toBeVisible();</pre>
       passes: false,
       fixes: [
         {
+          kind: 'fixable',
           difficulty: 3,
           label: 'Moderate — add drag-and-drop primitive to AIVA',
           tags: ['New interaction primitive', 'Code change'],
@@ -575,6 +602,7 @@ await expect(frame.getByText('Access granted')).toBeVisible();</pre>
         'Vision-based automation reads the rendered image with OCR exactly the way a human reads it. It sees "Email" written above a text-input-shaped rectangle and clicks. The fact that the text is an image rather than a DOM text node is invisible to OCR — they\'re both pixels.',
     },
     playwright: {
+      kind: 'fixable',
       difficulty: 4,
       label: 'No semantic anchors; only brittle structural selectors',
       notes: `
@@ -623,7 +651,7 @@ await expect(frame.getByText('Access granted')).toBeVisible();</pre>
         'AIVA does not look at the DOM. Its input is the composited screenshot, which the browser draws cross-origin content into exactly like everything else. The Stripe card field, the Auth0 dialog, the Turnstile box — all visible as pixels in one image. AIVA sees one rectangle of pixels with an "Email" label and clicks the input.',
     },
     playwright: {
-      difficulty: 5,
+      kind: 'impossible',
       label: 'Browser security; literally impossible',
       notes: `
         <p><strong>Verdict: this is a hard ceiling enforced by the browser security model, not by Playwright.</strong></p>
@@ -641,6 +669,7 @@ await expect(frame.getByText('Access granted')).toBeVisible();</pre>
       passes: false,
       fixes: [
         {
+          kind: 'fixable',
           difficulty: 1,
           label: 'Trivial — enable cross-origin iframes in AIVA launch config',
           tags: ['Browser config', 'No code change'],
@@ -673,6 +702,7 @@ await expect(frame.getByText('Access granted')).toBeVisible();</pre>
         'A vision-based automation tool already has a scroll-and-recognise loop built into its pipeline. It scrolls the visible viewport, takes a new screenshot, looks for the target visually, scrolls again, and repeats until the target appears. This is exactly what a human does. AIVA does not need to know that the list is virtualised — it does what humans do.',
     },
     playwright: {
+      kind: 'fixable',
       difficulty: 4,
       label: 'Requires bespoke per-list scroll logic',
       notes: `
@@ -733,11 +763,12 @@ const levelData = levels.map((lvl) => {
     localN,
     sectionSlug,
     urlPath: `/${sectionSlug}/level-${localN}/`,
-    playwrightViz: fixStyles(lvl.playwright.difficulty),
+    playwrightViz:
+      lvl.playwright.kind === 'fixable' ? fixStyles(lvl.playwright.difficulty) : null,
     aivaFixesViz:
       lvl.aiva.fixes?.map((f) => ({
         ...f,
-        viz: fixStyles(f.difficulty),
+        viz: f.kind === 'fixable' ? fixStyles(f.difficulty) : null,
       })) ?? null,
   };
 });
@@ -923,15 +954,31 @@ const groupedLevels = (
               <summary class="flex flex-wrap items-center gap-2 cursor-pointer text-sm font-semibold text-rose-900">
                 <span>Playwright context — could this test be fixed in Playwright?</span>
                 <span class="text-xs font-normal text-rose-700 group-open:hidden">(click to expand)</span>
-                <span class="ml-auto inline-flex items-center gap-1.5">
-                  <span class="flex gap-0.5">
-                    {lvl.playwrightViz.dotClasses.map((cls) => (
-                      <span class={`h-2 w-2 rounded-full ${cls}`} />
-                    ))}
-                  </span>
-                  <span class={`text-[10px] font-semibold uppercase tracking-wide ${lvl.playwrightViz.labelColor}`}>
-                    {lvl.playwright.difficulty}/5 · {lvl.playwright.label}
-                  </span>
+                <span class="ml-auto inline-flex items-center gap-2">
+                  {lvl.playwright.kind === 'impossible' ? (
+                    <>
+                      <span class="rounded-full bg-rose-200 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-rose-900">
+                        Impossible to fix
+                      </span>
+                      <span class="text-[10px] font-semibold uppercase tracking-wide text-rose-800">
+                        {lvl.playwright.label}
+                      </span>
+                    </>
+                  ) : (
+                    <>
+                      <span class="rounded-full bg-emerald-100 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-emerald-800">
+                        Fixable
+                      </span>
+                      <span class="flex gap-0.5">
+                        {lvl.playwrightViz!.dotClasses.map((cls) => (
+                          <span class={`h-2 w-2 rounded-full ${cls}`} />
+                        ))}
+                      </span>
+                      <span class={`text-[10px] font-semibold uppercase tracking-wide ${lvl.playwrightViz!.labelColor}`}>
+                        {lvl.playwright.label}
+                      </span>
+                    </>
+                  )}
                 </span>
               </summary>
               <div class="mt-4 space-y-3 text-sm leading-relaxed text-rose-950" set:html={lvl.playwright.notes} />
@@ -945,14 +992,22 @@ const groupedLevels = (
                   <span class="ml-auto inline-flex flex-wrap items-center gap-3">
                     {lvl.aivaFixesViz.map((fix) => (
                       <span class="inline-flex items-center gap-1.5">
-                        <span class="flex gap-0.5">
-                          {fix.viz.dotClasses.map((cls) => (
-                            <span class={`h-2 w-2 rounded-full ${cls}`} />
-                          ))}
-                        </span>
-                        <span class={`text-[10px] font-semibold uppercase tracking-wide ${fix.viz.labelColor}`}>
-                          {fix.difficulty}/5
-                        </span>
+                        {fix.kind === 'impossible' ? (
+                          <span class="rounded-full bg-rose-200 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-rose-900">
+                            Impossible to fix
+                          </span>
+                        ) : (
+                          <>
+                            <span class="rounded-full bg-emerald-100 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-emerald-800">
+                              Fixable
+                            </span>
+                            <span class="flex gap-0.5">
+                              {fix.viz!.dotClasses.map((cls) => (
+                                <span class={`h-2 w-2 rounded-full ${cls}`} />
+                              ))}
+                            </span>
+                          </>
+                        )}
                       </span>
                     ))}
                   </span>
@@ -973,13 +1028,23 @@ const groupedLevels = (
                         <div class="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
                           {lvl.aivaFixesViz!.length > 1 ? `Path ${idx + 1}` : 'Fix complexity'}
                         </div>
-                        <div class="flex items-center gap-1.5">
-                          {fix.viz.dotClasses.map((cls) => (
-                            <span class={`h-3 w-3 rounded-full ${cls}`} />
-                          ))}
-                          <span class="ml-1 text-xs text-slate-500">{fix.difficulty}/5</span>
-                        </div>
-                        <div class={`text-base font-bold ${fix.viz.labelColor}`}>{fix.label}</div>
+                        {fix.kind === 'impossible' ? (
+                          <span class="rounded-full bg-rose-200 px-2.5 py-0.5 text-xs font-semibold uppercase tracking-wide text-rose-900">
+                            Impossible to fix
+                          </span>
+                        ) : (
+                          <>
+                            <span class="rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-semibold uppercase tracking-wide text-emerald-800">
+                              Fixable
+                            </span>
+                            <div class="flex items-center gap-1.5">
+                              {fix.viz!.dotClasses.map((cls) => (
+                                <span class={`h-3 w-3 rounded-full ${cls}`} />
+                              ))}
+                            </div>
+                          </>
+                        )}
+                        <div class={`text-base font-bold ${fix.kind === 'fixable' ? fix.viz!.labelColor : 'text-rose-800'}`}>{fix.label}</div>
                         <div class="ml-auto text-xs italic text-slate-600">{fix.estimate}</div>
                       </div>
                       <div class="mt-3 flex flex-wrap gap-2">
