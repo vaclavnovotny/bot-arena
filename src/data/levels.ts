@@ -465,18 +465,26 @@ await page.evaluate((t) =&gt; {
         'A vision-based automation tool screenshots the rendered page and finds the input visually. The DOM privacy boundary is irrelevant — the rendered pixels are public. AIVA reads "Email", finds the box beneath it, clicks, types — exactly like a human looking at the screen. Closed shadow roots make automation harder only for tools that look at the DOM; they make it no harder for tools that look at the screen.',
     },
     playwright: {
-      kind: 'impossible',
-      label: 'Impossible — closed shadow is opaque',
+      kind: 'fixable',
+      difficulty: 3,
+      label: 'Init-script monkey-patch of attachShadow',
       notes: `
-        <p><strong>Verdict: impossible from inside Playwright. Closed shadow roots are an explicit privacy boundary that Playwright respects.</strong></p>
-        <p class="mt-2">Playwright's locator engine can pierce <em>open</em> shadow roots automatically (and the <code>&gt;&gt;&gt;</code> combinator works there too). For a closed shadow root there is no path at all — not from <code>page.locator</code>, not from <code>page.evaluate</code> (the component author may not expose any reference), not from any selector trick.</p>
-        <p class="mt-2">The only theoretical paths are:</p>
+        <p><strong>Verdict: solvable in Playwright via a documented workaround, but with timing-sensitive caveats — and most real enterprise apps avoid closed shadow anyway.</strong></p>
+        <p class="mt-2">The Playwright maintainers' own suggestion (<a href="https://github.com/microsoft/playwright/issues/23047" class="text-sky-700 underline hover:text-sky-900">issue #23047</a>) is to monkey-patch <code>Element.prototype.attachShadow</code> in an <code>addInitScript</code> hook so every subsequent <code>attachShadow({mode:'closed'})</code> call actually returns an open root:</p>
+        <pre class="mt-2 overflow-x-auto rounded bg-slate-900 p-3 font-mono text-[11px] leading-relaxed text-slate-100">await context.addInitScript(() =&gt; {
+  const orig = Element.prototype.attachShadow;
+  Element.prototype.attachShadow = function (options) {
+    return orig.call(this, { ...options, mode: 'open' });
+  };
+});</pre>
+        <p class="mt-2">Playwright's normal piercing locators then work as if the app had opted into open shadow.</p>
+        <p class="mt-2">The caveats are real:</p>
         <ul class="mt-2 list-disc space-y-1 pl-5">
-          <li>Convince the component author to expose <code>mode: 'open'</code> — rarely possible for third-party code.</li>
-          <li>Use a Chrome DevTools Protocol command that exposes the closed shadow — Playwright does not surface this in its public API.</li>
-          <li>Take a screenshot and use external OCR + <code>page.mouse.click(x, y)</code> — at which point you have rebuilt vision-based automation outside Playwright.</li>
+          <li>The init script must land <em>before</em> the framework caches a reference to <code>Element.prototype.attachShadow</code>. Some polyfills and bundlers grab the reference at module-load time and defeat the patch.</li>
+          <li>App code that re-attaches a root via a stashed reference bypasses the patch.</li>
+          <li>A CDP fallback (<code>DOM.querySelector</code> with <code>pierce: true</code>) exists for inspection but Playwright does not surface it in <code>Locator</code>; you would drop to <code>context.newCDPSession</code> for read-only access.</li>
         </ul>
-        <p class="mt-2">For real apps built on closed Web Components, selector-based testing is structurally a dead end.</p>
+        <p class="mt-2"><strong>Real enterprise apps overwhelmingly avoid closed shadow.</strong> Salesforce LWC uses synthetic shadow (a polyfill, fully queryable) by default; native mode uses <code>mode: 'open'</code>. SAP UI5 Web Components and ServiceNow Now Experience both use open shadow. Closed-mode shadow is largely a worst-case demo construction; in production, the real friction with web-component-heavy frontends is deep shadow nesting and framework-specific selector conventions, not the shadow seal itself.</p>
       `,
     },
     aiva: {

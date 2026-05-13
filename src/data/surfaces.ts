@@ -120,12 +120,12 @@ export const surfaces: Surface[] = [
   }),
   build({
     id: 'closed-shadow-dom',
-    title: 'Closed Shadow DOM (Salesforce LWC / SAP UI5 / ServiceNow)',
+    title: 'Web-component shadow DOM (Salesforce LWC / SAP UI5 / ServiceNow)',
     family: 'cross-origin',
-    examples: 'enterprise apps built on sealed web components',
+    examples: 'enterprise apps built on web components; closed-mode is the demo worst case, open shadow is the production norm',
     levels: [{ section: 'sr', n: 3 }],
     expanded:
-      'A web component declared with <code>attachShadow({ mode: \'closed\' })</code> walls off its inner DOM from any outside script. No selector — <code>querySelector</code>, <code>getByLabel</code>, <code>evaluate</code> — can cross the boundary. Visual automation reads pixels, so the seal is irrelevant; AIVA passes natively.',
+      'The arena demos <code>attachShadow({ mode: \'closed\' })</code> directly, but in production this is rare: Salesforce LWC uses synthetic or open shadow, SAP UI5 and ServiceNow Now Experience both use open shadow. Playwright can pierce closed shadow by monkey-patching <code>Element.prototype.attachShadow</code> in an <code>addInitScript</code> hook so subsequent shadow roots open &mdash; but timing is brittle and not the default. The real production friction is deep shadow nesting and framework-specific selector conventions, not the seal itself. AIVA reads pixels, so the shadow mode is invisible to it.',
   }),
   build({
     id: 'same-origin-iframe',
