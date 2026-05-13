@@ -194,7 +194,7 @@ function demoTag(ref: { section: 'bd' | 'sr'; n: number }): { label: string; hre
       <section class="mt-14 max-w-3xl rounded-xl border border-slate-200 bg-white p-6 text-sm">
         <h2 class="text-base font-semibold text-slate-900">Open questions for Playwright-driven teams</h2>
         <p class="mt-2 text-slate-600">
-          The 13 rows above cover failure modes selector-based automation faces in the page. Six more concerns live above the level pages, in the harness that runs Playwright. One is structural &mdash; how Playwright reaches an enterprise SUT at all when the browser is policy-locked. The other five appear the moment the suite reaches for LLM assistance &mdash; test generation, self-healing locators, agent-driven assertions. How does the team plan to answer them?
+          The 13 rows above cover failure modes selector-based automation faces in the page. Eleven more concerns live above the level pages, in the harness that runs Playwright. Six are structural &mdash; they bound what stock Playwright can reach <em>at all</em>, regardless of what is on the page: a policy-locked browser, hardware-bound auth, mandatory extensions, native OS dialogs, drag-from-OS uploads, and DRM-gated content. The other five appear the moment the suite reaches for LLM assistance &mdash; test generation, self-healing locators, agent-driven assertions. How does the team plan to answer them?
         </p>
 
         <h3 class="mt-4 text-sm font-semibold text-slate-900">Prompt injection from the SUT</h3>
@@ -219,6 +219,46 @@ function demoTag(ref: { section: 'bd' | 'sr'; n: number }): { label: string; hre
         </p>
         <p class="mt-2 text-slate-600">
           Enterprise SUTs increasingly require the user's <em>actual</em> browser &mdash; a Group-Policy-locked Chrome, an MDM-managed Edge for Business, or a managed-enterprise browser like Island or Talon &mdash; with corporate extensions enrolled, SSO bound to the device, and remote debugging disabled at the policy level. Playwright drives Chromium over CDP; <mark class="bg-amber-100 px-0.5 text-slate-900">when CDP is blocked, Playwright cannot drive the browser at all</mark>, no matter what is on the page. The team needs an answer for how the suite reaches these SUTs when the only acceptable client is a hardened, managed browser that <mark class="bg-amber-100 px-0.5 text-slate-900">refuses to be automated from the inside</mark>.
+        </p>
+
+        <h3 class="mt-4 text-sm font-semibold text-slate-900">WebAuthn and hardware-bound authentication</h3>
+        <p class="mt-1 font-medium text-slate-800">
+          How does the suite authenticate when the SUT requires a hardware security key or a platform-bound passkey?
+        </p>
+        <p class="mt-2 text-slate-600">
+          Production logins are migrating to credentials bound to physical hardware &mdash; a <em>YubiKey</em> on USB, <em>Touch ID</em>, <em>Windows Hello</em>, or a passkey written to the device's secure enclave. The WebAuthn handshake is a browser-mediated challenge to that hardware, signed by a private key the OS never exposes. Playwright offers a virtual authenticator over CDP (<code class="rounded bg-slate-100 px-1 py-0.5 text-[11px]">WebAuthn.addVirtualAuthenticator</code>) that simulates a software credential, but commercial relying parties increasingly require <em>attestation</em> &mdash; cryptographic proof the signing key lives in genuine silicon from Yubico, Apple, or a Windows TPM &mdash; and <mark class="bg-amber-100 px-0.5 text-slate-900">reject virtual authenticators outright</mark>. Where the SUT enforces hardware-attested FIDO2, <mark class="bg-amber-100 px-0.5 text-slate-900">stock Playwright cannot complete login at all</mark>. AIVA on a real workstation with the USB key plugged in completes the same handshake exactly the way the human user would.
+        </p>
+
+        <h3 class="mt-4 text-sm font-semibold text-slate-900">Required browser extensions</h3>
+        <p class="mt-1 font-medium text-slate-800">
+          How does the suite handle SUTs that only function with a specific browser extension installed and active?
+        </p>
+        <p class="mt-2 text-slate-600">
+          A surprising fraction of enterprise SaaS depends on an installed extension to operate: <em>Microsoft Single Sign-On Helper</em> for Azure AD token injection, the <em>Citrix Workspace</em> extension for ICA session bootstrap, password-manager extensions (<em>1Password, Bitwarden, KeePassXC</em>) for autofill into legacy banking portals that fingerprint missing autofill triggers, <em>Webex</em> / <em>Zoom</em> launcher extensions, and DRM / signing extensions in jurisdictions that require a certificate-signing helper for tax or banking. Stock Playwright launches a clean profile by default &mdash; no extensions &mdash; and <mark class="bg-amber-100 px-0.5 text-slate-900">Chrome refuses to load any extension at all in headless mode (open Chromium issue, unresolved since 2018)</mark>. Headed launches with <code class="rounded bg-slate-100 px-1 py-0.5 text-[11px]">--load-extension</code> work, but many enterprise extensions detect the automation context and <mark class="bg-amber-100 px-0.5 text-slate-900">silently refuse to inject tokens, populate fields, or initiate handshakes</mark>. AIVA's real-user browser session has whatever the desktop image has installed; the extensions load and operate without knowing the human is anywhere other than at the keyboard.
+        </p>
+
+        <h3 class="mt-4 text-sm font-semibold text-slate-900">Native OS dialogs</h3>
+        <p class="mt-1 font-medium text-slate-800">
+          How does the suite handle workflows that hand off to a native operating-system dialog?
+        </p>
+        <p class="mt-2 text-slate-600">
+          Most enterprise document workflows route through a native OS dialog at some point: <em>Save As</em> for a generated report, <em>Print preview</em> when exporting to PDF without a JS-driven download, the <em>Open with</em> chooser, the <em>screen / window picker</em> raised by <code class="rounded bg-slate-100 px-1 py-0.5 text-[11px]">getDisplayMedia</code>, the modern File System Access API's <code class="rounded bg-slate-100 px-1 py-0.5 text-[11px]">showOpenFilePicker</code> / <code class="rounded bg-slate-100 px-1 py-0.5 text-[11px]">showSaveFilePicker</code>. <mark class="bg-amber-100 px-0.5 text-slate-900">These dialogs are rendered by the operating system, not the browser DOM</mark>; Playwright runs inside the browser process and has no surface to reach them. <code class="rounded bg-slate-100 px-1 py-0.5 text-[11px]">page.on('filechooser')</code> covers the simple <code class="rounded bg-slate-100 px-1 py-0.5 text-[11px]">&lt;input type="file"&gt;</code> flow, but <mark class="bg-amber-100 px-0.5 text-slate-900">anything that needs the user to name a file, pick a destination, choose a window to share, or navigate a folder tree is unreachable</mark>. AIVA operates at the OS level over VNC; the native dialog is just more pixels on the screen, recognised the same way as any other UI surface.
+        </p>
+
+        <h3 class="mt-4 text-sm font-semibold text-slate-900">Drag-and-drop file uploads from the OS</h3>
+        <p class="mt-1 font-medium text-slate-800">
+          How does the suite upload files to widgets that only accept HTML5 drag-and-drop from outside the browser?
+        </p>
+        <p class="mt-2 text-slate-600">
+          A growing class of upload widgets supports <em>only</em> drag-and-drop from the OS file explorer and ships no <code class="rounded bg-slate-100 px-1 py-0.5 text-[11px]">&lt;input type="file"&gt;</code> fallback &mdash; <em>Discord</em> attachments, <em>Notion</em> image blocks, several CMS media libraries, many internal corporate document portals. Playwright's <code class="rounded bg-slate-100 px-1 py-0.5 text-[11px]">setInputFiles</code> requires a literal file input to attach the bytes to; <mark class="bg-amber-100 px-0.5 text-slate-900">when the page has none, there is no DOM hook to bind to at all</mark>. The drag source lives in an OS process outside the browser sandbox, and Playwright has no API to forge a cross-process <code class="rounded bg-slate-100 px-1 py-0.5 text-[11px]">DragEvent</code> whose <code class="rounded bg-slate-100 px-1 py-0.5 text-[11px]">dataTransfer.files</code> contains real bytes. <mark class="bg-amber-100 px-0.5 text-slate-900">Synthetic <code class="rounded bg-slate-100 px-1 py-0.5 text-[11px]">DragEvent</code>s constructed via <code class="rounded bg-slate-100 px-1 py-0.5 text-[11px]">page.evaluate</code> fail on any widget that reads the actual file bytes</mark> &mdash; which is most of them, because that is the whole point. AIVA picks up a real file from the desktop file manager and drags it onto the page the way a user would.
+        </p>
+
+        <h3 class="mt-4 text-sm font-semibold text-slate-900">DRM-protected content</h3>
+        <p class="mt-1 font-medium text-slate-800">
+          How does the suite reach SUTs whose content is gated by Widevine or another EME-based DRM?
+        </p>
+        <p class="mt-2 text-slate-600">
+          A widening surface area is locked behind Encrypted Media Extensions: <em>Netflix, Spotify, Disney+</em> for media QA; <em>banking confidential-statement viewers</em>, <em>e-discovery / legal-document portals</em>, and <em>secure-payslip portals</em> for enterprise QA; <em>ProctorU, HonorLock, ExamSoft</em> and similar online-exam platforms for higher-education QA. All of them refuse to render content without a working Content Decryption Module &mdash; in practice, Google Widevine. <mark class="bg-amber-100 px-0.5 text-slate-900">Playwright's bundled Chromium is open-source Chromium without Widevine</mark>; pages that require it render as a black box, an error toast, or a fallback &ldquo;your browser does not support this content&rdquo; message. Routes around this exist (point Playwright at locally-installed Google Chrome instead of the bundled Chromium, manually fetch and stage the Widevine library) but they <mark class="bg-amber-100 px-0.5 text-slate-900">defeat the &ldquo;bundled, reproducible Playwright install&rdquo; guarantee</mark> the suite was built on. AIVA's real Linux Chrome ships Widevine as a normal browser component and renders the content the same way it does for any human viewer.
         </p>
 
         <h3 class="mt-4 text-sm font-semibold text-slate-900">Reproducibility</h3>
@@ -246,7 +286,7 @@ function demoTag(ref: { section: 'bd' | 'sr'; n: number }): { label: string; hre
         </p>
 
         <p class="mt-4 text-xs text-slate-500">
-          These concerns live above the arena's level pages, in the harness that runs Playwright. The LLM-driven ones apply to any test stack with an LLM in the loop, including an agentic-AIVA layer that drives Playwright. The CDP-availability one is specific to Playwright &mdash; AIVA's classic VNC + image-recognition path is unaffected because it controls the browser from the OS, not via CDP.
+          These concerns live above the arena's level pages, in the harness that runs Playwright. The LLM-driven ones apply to any test stack with an LLM in the loop, including an agentic-AIVA layer that drives Playwright. The six structural ones are specific to Playwright's selector + CDP model &mdash; AIVA's classic VNC + image-recognition path is unaffected because it controls the browser from the OS, with whatever extensions, DRM modules, USB security keys, and native OS dialogs the real desktop has.
         </p>
       </section>
 
