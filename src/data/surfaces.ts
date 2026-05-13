@@ -131,10 +131,10 @@ export const surfaces: Surface[] = [
     id: 'same-origin-iframe',
     title: 'Same-origin embedded widget',
     family: 'cross-origin',
-    examples: 'older same-origin payment & SSO iframes',
+    examples: 'legacy WYSIWYG editors (TinyMCE / CKEditor classic), web-mail composers (Gmail, Outlook Web), legacy intranet portals served from the same parent domain',
     levels: [{ section: 'sr', n: 4 }],
     expanded:
-      'Older payment and SSO forms commonly live inside same-origin iframes. Page-scoped locators do not traverse frames, so the default <code>getByLabel(\'Email\')</code> call misses entirely. Playwright can recover with <code>page.frameLocator(...)</code>, but every test that touches the widget needs to be frame-aware. AIVA does not see frames at all.',
+      'Page-scoped locators do not traverse frames, so the default <code>getByLabel(\'Email\')</code> call misses entirely. Playwright recovers with one <code>page.frameLocator(...)</code> call at the top of each test that touches the widget &mdash; <code>FrameLocator</code> supports the full <code>getBy*</code> API as a first-class chainable locator. Note that the payment / SSO iframes the page used to cite (Stripe Elements, Adyen, Braintree, Auth0) are <em>cross-origin by design</em> for PCI isolation; that\'s a different problem covered in the cross-origin iframe row. Genuine same-origin iframe surfaces in 2026 are mostly legacy editors and web-mail composers. AIVA does not see frames at all.',
   }),
 
   // ─── Fingerprinting ──────────────────────────────────────────────────
@@ -194,7 +194,7 @@ export const surfaces: Surface[] = [
     examples: 'AG Grid, TanStack Virtual, Slack history, Gmail, Notion databases',
     levels: [{ section: 'sr', n: 8 }],
     expanded:
-      'Modern data-grids (AG Grid, TanStack Virtual, Slack history, Notion databases) render only the rows currently in the viewport. A test that wants the 500th row has to know the list is virtualised, know the row height, and dispatch programmatic scrolls. AIVA\'s vision loop already scrolls-and-looks the way a human does — no list-specific code.',
+      'Modern data-grids render only the rows currently in the viewport, so a test that wants the 500th row has to scroll the container and wait for the row to mount. The recipe is well-documented: AG Grid publishes an <a href="https://blog.ag-grid.com/writing-e2e-tests-for-ag-grid-react-tables-with-playwright/" class="text-sky-700 underline hover:text-sky-900">official Playwright E2E guide</a> with a <code>setupAgTestIds</code> helper, and LSEG maintains an open-source <code>ag-grid-playwright</code> bridge. The rough edges (per-library scroll APIs, <code>locator.count()</code> reporting only mounted rows, row+column virtualisation) keep this above 2/5 but well below "essentially impossible". AIVA\'s vision loop already scrolls-and-looks the way a human does &mdash; no list-specific code.',
   }),
 
   // ─── Dynamic selectors ───────────────────────────────────────────────
@@ -202,10 +202,10 @@ export const surfaces: Surface[] = [
     id: 'dynamic-selectors',
     title: 'Dynamic / randomised selectors',
     family: 'dynamic-selectors',
-    examples: 'CSS-in-JS apps, anti-bot WAFs, ticketing / sneaker drops',
+    examples: 'apps with stripped accessibility metadata; some ticketing UIs (Ticketmaster) have occasional selector churn but lean on queue + fingerprinting',
     levels: [{ section: 'sr', n: 2 }],
     expanded:
-      'CSS-in-JS frameworks and anti-bot WAFs rotate every <code>id</code>, <code>name</code>, and <code>class</code> per request, so the locator that worked yesterday is dead today. Tests fall back to structural anchors that break the moment the page is refactored. AIVA does not depend on selectors at all — labels and positions on screen are stable across rerolls.',
+      'When the app ships proper accessibility metadata, Playwright\'s <code>getByRole</code> / <code>getByLabel</code> / <code>getByText</code> are immune to id/name/class rerolling and this surface is close to 2/5. The arena\'s demo deliberately strips both the attributes and the accessibility tree, which forces brittle structural locators and pushes it closer to 4/5. CSS-in-JS framing (Tailwind, Emotion, styled-components) overstates the problem &mdash; Tailwind classes are stable utility strings and Emotion hashes are stable per style definition, not per request. AIVA does not depend on selectors at all &mdash; labels and positions on screen are stable across rerolls.',
   }),
 
   // ─── Behavioural ─────────────────────────────────────────────────────

@@ -419,23 +419,23 @@ await page.evaluate((t) =&gt; {
     },
     playwright: {
       kind: 'fixable',
-      difficulty: 4,
-      label: 'Brittle workarounds, no stable selector',
+      difficulty: 3,
+      label: 'Semantic locators if a11y exists; brittle structural ones if not',
       notes: `
-        <p><strong>Verdict: possible with brittle fallback selectors, but the entire promise of accessibility-based testing is gone.</strong></p>
-        <p class="mt-2">Playwright's normal idioms break:</p>
+        <p><strong>Verdict: depends on whether the app ships accessibility metadata. With a11y, Playwright's <a href="https://playwright.dev/docs/best-practices" class="text-sky-700 underline hover:text-sky-900">recommended semantic locators</a> (<code>getByRole</code>, <code>getByLabel</code>, <code>getByText</code>) are immune to id/class rerolling and the row is close to 2/5. Without a11y &mdash; the arena's demo deliberately strips it &mdash; only brittle structural selectors are left and it's closer to 4/5. 3/5 fits the average.</strong></p>
+        <p class="mt-2">Real-world ground truth on the named examples:</p>
         <ul class="mt-2 list-disc space-y-1 pl-5">
-          <li><code>page.getByLabel('Email')</code> — no <code>&lt;label&gt;</code> element exists, so this returns nothing.</li>
-          <li><code>page.getByRole('textbox', { name: 'Email' })</code> — no accessible name, so this returns nothing.</li>
-          <li><code>page.getByPlaceholder('Email')</code> — no <code>placeholder</code>, so this returns nothing.</li>
+          <li><strong>CSS-in-JS</strong> (Tailwind, styled-components, Emotion): Tailwind classes are stable utility strings; Emotion hashes are <a href="https://www.infoq.com/news/2022/10/prefer-build-time-css-js/" class="text-sky-700 underline hover:text-sky-900">stable per style definition</a>, not per request. <code>getByRole</code> + accessible name handles all of these cleanly.</li>
+          <li><strong>Anti-bot WAFs</strong>: DataDome, PerimeterX, Kasada rely on TLS+JS fingerprinting, behavioural biometrics, and proof-of-work &mdash; per-request DOM-selector randomisation is not a documented production tactic.</li>
+          <li><strong>Ticketing / sneaker drops</strong>: Ticketmaster does have some "moving selectors" but its primary defence is randomised queue position + fingerprinting; Nike SNKRS uses telemetry + IP reputation. Selector churn happens but is rarely the load-bearing defence.</li>
         </ul>
-        <p class="mt-2">Possible fallbacks, in increasing brittleness:</p>
+        <p class="mt-2">For this demo (no labels, no accessible names, all attributes rerolled), the fallbacks are:</p>
         <ol class="mt-2 list-decimal space-y-1 pl-5">
-          <li><code>page.locator('input[type="email"]')</code> — works this run; breaks if the input type is also randomised, or another email input is added.</li>
-          <li><code>page.locator('input').nth(0)</code> — works this run; breaks the moment the form reorders or grows.</li>
-          <li><code>page.locator('div:has-text("Email") + input')</code> — works for this layout; breaks if the DOM structure is rewritten.</li>
+          <li><code>page.locator('input[type="email"]')</code> &mdash; works this run; breaks if the input type is also randomised, or another email input is added.</li>
+          <li><code>page.locator('input').nth(0)</code> &mdash; works this run; breaks the moment the form reorders or grows.</li>
+          <li><code>page.locator('div:has-text("Email") + input')</code> &mdash; works for this layout; breaks if the DOM structure is rewritten.</li>
         </ol>
-        <p class="mt-2">For a truly hostile site, every fallback is one revision away from breaking. The maintenance burden grows linearly with the number of forms; the test suite becomes the single largest source of flakiness in the project.</p>
+        <p class="mt-2">For an app that combines randomised attributes with stripped accessibility metadata, every fallback is one revision away from breaking; the maintenance burden grows linearly with the number of forms.</p>
       `,
     },
     aiva: {
@@ -517,18 +517,18 @@ await page.evaluate((t) =&gt; {
     },
     playwright: {
       kind: 'fixable',
-      difficulty: 3,
-      label: 'Requires every test to be frame-aware',
+      difficulty: 2,
+      label: 'One extra method call per locator chain',
       notes: `
-        <p><strong>Verdict: solvable but every test that touches frame content has to be rewritten with explicit <code>frameLocator</code> calls.</strong></p>
-        <p class="mt-2">The frame-aware version of this test would look like:</p>
+        <p><strong>Verdict: solvable with one extra <code>frameLocator</code> call per chain. <code>FrameLocator</code> supports the full <code>getBy*</code> API and is a first-class chainable locator in Playwright.</strong></p>
+        <p class="mt-2">The frame-aware version of this test:</p>
         <pre class="mt-2 overflow-x-auto rounded bg-slate-900 p-3 font-mono text-[11px] leading-relaxed text-slate-100">const frame = page.frameLocator('iframe[title="login-frame"]');
 await frame.getByLabel('Email').fill('user@example.com');
 await frame.getByLabel('Password').fill('hunter2');
 await frame.getByRole('button', { name: 'Sign in' }).click();
 await expect(frame.getByText('Access granted')).toBeVisible();</pre>
-        <p class="mt-2">For a single iframe this is annoying but tractable. In real applications the cost compounds: every Stripe payment field, every Auth0 step, every embedded widget is a separate frame. Some frames are cross-origin (Stripe Elements, for example), at which point Playwright cannot reach in at all — you would need a separate test running against the iframe URL directly, with no shared session.</p>
-        <p class="mt-2">Net effect: frame-heavy SaaS produces brittle, fragmented test suites where one frame change cascades into many test rewrites.</p>
+        <p class="mt-2">The cost is one <code>frameLocator()</code> call at the top of each test that touches embedded content. That's modest enough to belong in the 2/5 band.</p>
+        <p class="mt-2"><strong>Real-world same-origin iframes in 2026 are rarer than the page implies.</strong> The classic payment / SSO examples (Stripe Elements, Adyen Web Drop-in, Braintree Hosted Fields, Auth0 Universal Login) are <em>cross-origin by design</em> for PCI isolation; that's a different problem covered under the cross-origin iframe row. Genuine same-origin iframe surfaces today are legacy WYSIWYG editors (TinyMCE / CKEditor classic), web-mail composers (Gmail, Outlook Web), and legacy intranet portals served from the same parent domain.</p>
       `,
     },
     aiva: {
@@ -714,19 +714,17 @@ await expect(frame.getByText('Access granted')).toBeVisible();</pre>
     },
     playwright: {
       kind: 'fixable',
-      difficulty: 4,
-      label: 'Requires bespoke per-list scroll logic',
+      difficulty: 3,
+      label: 'Per-list scroll helper; AG Grid has an official Playwright guide',
       notes: `
-        <p><strong>Verdict: solvable with significant per-list bespoke code; the standard test idioms do not work.</strong></p>
-        <p class="mt-2">For each virtualised list a test interacts with, the test author has to:</p>
+        <p><strong>Verdict: solvable with a per-list scroll-and-wait helper. Documented in vendor docs (AG Grid publishes an official Playwright E2E guide; LSEG maintains an open-source <code>ag-grid-playwright</code> bridge) and in Playwright issue threads.</strong></p>
+        <p class="mt-2">The canonical pattern for each virtualised list a test interacts with:</p>
         <ol class="mt-2 list-decimal space-y-1 pl-5">
-          <li>Know that the list is virtualised (it might not be obvious from the rendered HTML).</li>
-          <li>Know the total number of rows and the row height to compute where to scroll.</li>
-          <li>Dispatch a programmatic scroll on the list container, wait for the new rows to mount, query, repeat.</li>
-          <li>Alternatively, scroll incrementally and probe for the target row after each step.</li>
+          <li>Scroll the inner container with <code>page.evaluate(el =&gt; el.scrollTo(0, y), container)</code> or use <code>locator.scrollIntoViewIfNeeded()</code> on a row anchor.</li>
+          <li><code>waitFor</code> the target row to mount, then act on it.</li>
+          <li>If the list exposes keyboard navigation (react-window, TanStack Virtual), <code>keyboard.press('ArrowDown')</code> often works as a portable alternative.</li>
         </ol>
-        <p class="mt-2">All of this is custom code that lives inside the test suite. Different virtualisation libraries (react-window, TanStack Virtual, AG Grid) expose different APIs — there is no portable solution. And many sites virtualise BOTH rows AND columns, multiplying the complexity.</p>
-        <p class="mt-2">For real apps with very long lists (Gmail, Slack, AG Grid dashboards), the per-test cost compounds: every test that needs to click a non-visible item has its own scroll helper, its own retry logic, its own flake mode.</p>
+        <p class="mt-2">The friction (3/5, not 4/5) lives in the rough edges: <code>locator.count()</code> reports only mounted rows so size assertions need a workaround (<a href="https://github.com/microsoft/playwright/issues/17042" class="text-sky-700 underline hover:text-sky-900">#17042</a>); virtualisation libraries (react-window, TanStack Virtual, AG Grid) expose different scroll APIs so the helper is per-library; some apps virtualise rows AND columns. But the recipes are well-documented and the AG Grid official guide ships a <code>setupAgTestIds</code> helper that turns this into a solved problem.</p>
       `,
     },
     aiva: {
