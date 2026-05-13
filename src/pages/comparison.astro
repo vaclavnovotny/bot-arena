@@ -326,10 +326,10 @@ function demoTag(ref: { section: 'bd' | 'sr'; n: number }): { label: string; hre
 
         <details class="group mt-3 border-t border-slate-100 pt-3">
           <summary class="cursor-pointer text-sm font-medium text-slate-800">
-            <strong class="text-slate-900">Cost predictability:</strong> how do you keep CI cost bounded by CPU time, with no remote-inference dependency to bill or fail?
+            <strong class="text-slate-900">Cost predictability:</strong> how do you keep automation cost bounded and predictable across runs?
           </summary>
           <p class="mt-2 text-slate-600">
-            A pure-code Playwright suite costs whatever the CI runner costs &mdash; <mark class="bg-amber-100 px-0.5 text-slate-900">flat, CPU-only, offline-capable</mark>. Every LLM-driven step becomes a paid call to a remote provider that may rate-limit, deprecate the model, or go down. Per-run cost scales with test count and prompt size; <mark class="bg-amber-100 px-0.5 text-slate-900">the suite no longer runs at all if the inference provider does not</mark>. What is the path back to bounded, offline-capable cost?
+            A pure-code automation costs whatever the machine running it costs &mdash; <mark class="bg-amber-100 px-0.5 text-slate-900">flat and predictable per run</mark>. LLM-driven steps replace that with three compounding sources of variance: per-call cost scales with model size and prompt length, total usage scales with the number of steps and retries, and <mark class="bg-amber-100 px-0.5 text-slate-900">the price floor moves under you when the provider changes tiers, rate-limits the account, or deprecates the model</mark>. Self-hosted LLMs trade the third for non-trivial GPU bills and operational overhead. What is the path to a cost line that does not bend with model size, prompt length, or provider behaviour?
           </p>
         </details>
 
