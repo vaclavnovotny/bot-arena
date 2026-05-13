@@ -195,14 +195,6 @@ function demoTag(ref: { section: 'bd' | 'sr'; n: number }): { label: string; hre
           The 13 rows above cover failure modes selector-based automation faces in the page. Six more concerns live above the level pages, in the harness that runs Playwright. One is structural &mdash; how Playwright reaches an enterprise SUT at all when the browser is policy-locked. The other five appear the moment the suite reaches for LLM assistance &mdash; test generation, self-healing locators, agent-driven assertions. How does the team plan to answer them?
         </p>
 
-        <h3 class="mt-4 text-sm font-semibold text-slate-900">CDP unavailability in policy-managed browsers</h3>
-        <p class="mt-1 font-medium text-slate-800">
-          How does the suite reach SUTs that only accept a policy-managed, CDP-disabled browser?
-        </p>
-        <p class="mt-2 text-slate-600">
-          Enterprise SUTs increasingly require the user's <em>actual</em> browser &mdash; a Group-Policy-locked Chrome, an MDM-managed Edge for Business, or a managed-enterprise browser like Island or Talon &mdash; with corporate extensions enrolled, SSO bound to the device, and remote debugging disabled at the policy level. Playwright drives Chromium over CDP; when CDP is blocked, Playwright cannot drive the browser at all, no matter what is on the page. The team needs an answer for how the suite reaches these SUTs when the only acceptable client is a hardened, managed browser that refuses to be automated from the inside.
-        </p>
-
         <h3 class="mt-4 text-sm font-semibold text-slate-900">Prompt injection from the SUT</h3>
         <p class="mt-1 font-medium text-slate-800">
           How does the harness defend the LLM against instructions embedded in the page itself?
@@ -217,6 +209,14 @@ function demoTag(ref: { section: 'bd' | 'sr'; n: number }): { label: string; hre
         </p>
         <p class="mt-2 text-slate-600">
           An LLM-backed assertion (<em>&ldquo;Is the order confirmation visible?&rdquo;</em>) can confidently misreport state &mdash; a passing test on a broken feature, or a failing test on a working one. The testing contract assumes the assertion is a reliable witness; an LLM is not. The team needs to cross-check the model's verdict against a deterministic signal, audit accuracy against ground truth on a regular cadence, and define what happens when the LLM and the DOM disagree.
+        </p>
+
+        <h3 class="mt-4 text-sm font-semibold text-slate-900">CDP unavailability in policy-managed browsers</h3>
+        <p class="mt-1 font-medium text-slate-800">
+          How does the suite reach SUTs that only accept a policy-managed, CDP-disabled browser?
+        </p>
+        <p class="mt-2 text-slate-600">
+          Enterprise SUTs increasingly require the user's <em>actual</em> browser &mdash; a Group-Policy-locked Chrome, an MDM-managed Edge for Business, or a managed-enterprise browser like Island or Talon &mdash; with corporate extensions enrolled, SSO bound to the device, and remote debugging disabled at the policy level. Playwright drives Chromium over CDP; when CDP is blocked, Playwright cannot drive the browser at all, no matter what is on the page. The team needs an answer for how the suite reaches these SUTs when the only acceptable client is a hardened, managed browser that refuses to be automated from the inside.
         </p>
 
         <h3 class="mt-4 text-sm font-semibold text-slate-900">Reproducibility</h3>
