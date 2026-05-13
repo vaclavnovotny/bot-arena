@@ -206,7 +206,7 @@ function demoTag(ref: { section: 'bd' | 'sr'; n: number }): { label: string; hre
       <section class="mt-14 max-w-3xl rounded-xl border border-slate-200 bg-white p-6 text-sm">
         <h2 class="text-base font-semibold text-slate-900">Open questions for Playwright-driven teams</h2>
         <p class="mt-2 text-slate-600">
-          The 13 rows above cover failure modes selector-based automation faces in the page. Eleven more concerns live above the level pages, in the harness that runs Playwright. Six are structural &mdash; they bound what stock Playwright can reach <em>at all</em>, regardless of what is on the page: a policy-locked browser, hardware-bound auth, mandatory extensions, native OS dialogs, drag-from-OS uploads, and DRM-gated content. The other five appear the moment the suite reaches for LLM assistance &mdash; test generation, self-healing locators, agent-driven assertions. How does the team plan to answer them?
+          The 13 rows above cover failure modes selector-based automation faces in the page. Ten more concerns live above the level pages, in the harness that runs Playwright. Five are structural &mdash; they bound what stock Playwright can reach <em>at all</em>, regardless of what is on the page: a policy-locked browser, mandatory extensions, native OS dialogs, drag-from-OS uploads, and DRM-gated content. The other five appear the moment the suite reaches for LLM assistance &mdash; test generation, self-healing locators, agent-driven assertions. How does the team plan to answer them?
         </p>
 
         <h3 class="mt-4 text-sm font-semibold text-slate-900">Prompt injection from the SUT</h3>
@@ -231,14 +231,6 @@ function demoTag(ref: { section: 'bd' | 'sr'; n: number }): { label: string; hre
         </p>
         <p class="mt-2 text-slate-600">
           Enterprise SUTs increasingly require the user's <em>actual</em> browser &mdash; a Group-Policy-locked Chrome, an MDM-managed Edge for Business, or a managed-enterprise browser like Island or Talon &mdash; with corporate extensions enrolled, SSO bound to the device, and remote debugging disabled at the policy level. Playwright drives Chromium over CDP; <mark class="bg-amber-100 px-0.5 text-slate-900">when CDP is blocked, Playwright cannot drive the browser at all</mark>, no matter what is on the page. The team needs an answer for how the suite reaches these SUTs when the only acceptable client is a hardened, managed browser that <mark class="bg-amber-100 px-0.5 text-slate-900">refuses to be automated from the inside</mark>.
-        </p>
-
-        <h3 class="mt-4 text-sm font-semibold text-slate-900">WebAuthn and hardware-bound authentication</h3>
-        <p class="mt-1 font-medium text-slate-800">
-          How does the suite authenticate when the SUT requires a hardware security key or a platform-bound passkey?
-        </p>
-        <p class="mt-2 text-slate-600">
-          Production logins are migrating to credentials bound to physical hardware &mdash; a <em>YubiKey</em> on USB, <em>Touch ID</em>, <em>Windows Hello</em>, or a passkey written to the device's secure enclave. The WebAuthn handshake is a browser-mediated challenge to that hardware, signed by a private key the OS never exposes. Playwright offers a virtual authenticator over CDP (<code class="rounded bg-slate-100 px-1 py-0.5 text-[11px]">WebAuthn.addVirtualAuthenticator</code>) that simulates a software credential, but commercial relying parties increasingly require <em>attestation</em> &mdash; cryptographic proof the signing key lives in genuine silicon from Yubico, Apple, or a Windows TPM &mdash; and <mark class="bg-amber-100 px-0.5 text-slate-900">reject virtual authenticators outright</mark>. Where the SUT enforces hardware-attested FIDO2, <mark class="bg-amber-100 px-0.5 text-slate-900">stock Playwright cannot complete login at all</mark>. AIVA on a real workstation with the USB key plugged in completes the same handshake exactly the way the human user would.
         </p>
 
         <h3 class="mt-4 text-sm font-semibold text-slate-900">Required browser extensions</h3>
@@ -298,7 +290,7 @@ function demoTag(ref: { section: 'bd' | 'sr'; n: number }): { label: string; hre
         </p>
 
         <p class="mt-4 text-xs text-slate-500">
-          These concerns live above the arena's level pages, in the harness that runs Playwright. The LLM-driven ones apply to any test stack with an LLM in the loop, including an agentic-AIVA layer that drives Playwright. The six structural ones are specific to Playwright's selector + CDP model &mdash; AIVA's classic VNC + image-recognition path is unaffected because it controls the browser from the OS, with whatever extensions, DRM modules, USB security keys, and native OS dialogs the real desktop has.
+          These concerns live above the arena's level pages, in the harness that runs Playwright. The LLM-driven ones apply to any test stack with an LLM in the loop, including an agentic-AIVA layer that drives Playwright. The five structural ones are specific to Playwright's selector + CDP model &mdash; AIVA's classic VNC + image-recognition path is unaffected because it controls the browser from the OS, with whatever extensions, DRM modules, and native OS dialogs the real desktop has.
         </p>
       </section>
 
