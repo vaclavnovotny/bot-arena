@@ -169,12 +169,12 @@ export const surfaces: Surface[] = [
   // ─── Vision-only ─────────────────────────────────────────────────────
   build({
     id: 'canvas-ui',
-    title: 'Canvas-rendered UI (Photoshop Web / Photopea / tldraw / Miro / WASM games)',
+    title: 'Canvas-rendered UI (legacy enterprise apps, custom widgets, WASM apps)',
     family: 'vision-only',
-    examples: 'fully WASM-rendered apps; Figma and Google Sheets paint to canvas too but expose a parallel accessibility-tree DOM that Playwright can reach',
+    examples: 'legacy enterprise apps without a11y, AS/400-to-web emulators, signature pads, canvas datepickers, charting widgets with embedded interaction, fully-WASM apps (Photoshop Web, Photopea, tldraw, Miro, Unity/Unreal games)',
     levels: [{ section: 'sr', n: 1 }],
     expanded:
-      'The arena demos the worst case: a single <code>&lt;canvas&gt;</code> with no DOM at all. In production the picture is more mixed. Figma ships a parallel accessibility-tree HTML layer for screen readers, and Playwright\'s <code>getByRole</code> / <code>page.accessibility.snapshot()</code> read exactly that tree. Google Sheets renders the grid to canvas but the cell editor, formula bar, toolbar, sidebars, and menus are real DOM. The genuinely opaque cases are fully-WebAssembly apps &mdash; Photoshop Web, Photopea, tldraw, Excalidraw, Miro\'s board surface, Unity/Unreal WASM games &mdash; where Playwright is reduced to <code>page.mouse.click(x, y)</code> driven by an external OCR or template-matching pipeline. AIVA reads pixels, so the split between "has accessibility tree" and "WASM-opaque" does not matter to it.',
+      'When a canvas surface does not expose an accessibility tree, Playwright has nothing to query &mdash; <code>getByLabel</code>, <code>getByRole</code>, <code>getByText</code> all return empty. The blocking property is what makes this Impossible rather than just hard: one canvas widget anywhere in a flow stops the whole automation, because selectors cannot skip past a step they cannot interact with. The narrow exception is consumer-SaaS canvas apps that ship a parallel a11y-tree DOM (Figma, Google Sheets) &mdash; those are reachable, but they are a minority in the legacy and enterprise apps an automation team actually targets. AIVA reads pixels, so the split between "has accessibility tree" and "no a11y at all" does not matter to it.',
   }),
   build({
     id: 'image-labels',

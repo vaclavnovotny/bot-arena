@@ -37,7 +37,7 @@ describe('surfaces data module', () => {
 
     const canvas = surfaces.find((s) => s.id === 'canvas-ui');
     expect(canvas).toBeDefined();
-    expect(canvas!.playwright).toEqual({ verdict: 'possible', effort: 3 });
+    expect(canvas!.playwright).toEqual({ verdict: 'impossible', effort: 5 });
     expect(canvas!.aiva).toEqual({ verdict: 'native', effort: 1 });
   });
 });
