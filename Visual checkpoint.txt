@@ -1,0 +1,8 @@
+Visual checkpoint -> LLM orchestruje flow tak může cheatovat a nejde tomu zabranit:
+-> LLM Judge 
+	-> prodrazuje
+	-> porad LLM -> stejny problémy: halucinace, prompt injection utoky, "obe llm muzou halucinovat"
+-> Ručně, člověkem:
+	-> not feasible
+-> statistické metriky nad použitýma tokenama
+-> the way -> Deterministický orchestrátor a deterministickou kontrolu -> orchestrátor zajistí, že se check nedá přeskočit. Kontrola zajistí jestli jsme ve validním očekávánem stavu -> to z principu nemůže být LLM. 
