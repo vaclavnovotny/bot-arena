@@ -245,7 +245,7 @@ function demoTag(ref: { section: 'bd' | 'sr'; n: number }): { label: string; hre
 
         <details class="group mt-3 border-t border-slate-100 pt-3">
           <summary class="cursor-pointer text-sm font-medium text-slate-800">
-            How does the suite reach SUTs that only accept a policy-managed, CDP-disabled browser?
+            <strong class="text-slate-900">Policy-locked browser:</strong> how does the suite reach SUTs that only accept a policy-managed, CDP-disabled browser?
           </summary>
           <p class="mt-2 text-slate-600">
             Enterprise SUTs increasingly require the user's <em>actual</em> browser &mdash; a Group-Policy-locked Chrome, an MDM-managed Edge for Business, or a managed-enterprise browser like Island or Talon &mdash; with corporate extensions enrolled, SSO bound to the device, and remote debugging disabled at the policy level. Playwright drives Chromium over CDP; <mark class="bg-amber-100 px-0.5 text-slate-900">when CDP is blocked, Playwright cannot drive the browser at all</mark>, no matter what is on the page. The team needs an answer for how the suite reaches these SUTs when the only acceptable client is a hardened, managed browser that <mark class="bg-amber-100 px-0.5 text-slate-900">refuses to be automated from the inside</mark>.
@@ -254,7 +254,7 @@ function demoTag(ref: { section: 'bd' | 'sr'; n: number }): { label: string; hre
 
         <details class="group mt-3 border-t border-slate-100 pt-3">
           <summary class="cursor-pointer text-sm font-medium text-slate-800">
-            How does the suite handle SUTs that only function with a specific browser extension installed and active?
+            <strong class="text-slate-900">Mandatory extensions:</strong> how does the suite handle SUTs that only function with a specific browser extension installed and active?
           </summary>
           <p class="mt-2 text-slate-600">
             A surprising fraction of enterprise SaaS depends on an installed extension to operate: <em>Microsoft Single Sign-On Helper</em> for Azure AD token injection, the <em>Citrix Workspace</em> extension for ICA session bootstrap, password-manager extensions (<em>1Password, Bitwarden, KeePassXC</em>) for autofill into legacy banking portals that fingerprint missing autofill triggers, <em>Webex</em> / <em>Zoom</em> launcher extensions, and DRM / signing extensions in jurisdictions that require a certificate-signing helper for tax or banking. Stock Playwright launches a clean profile by default &mdash; no extensions &mdash; and <mark class="bg-amber-100 px-0.5 text-slate-900">Chrome refuses to load any extension at all in headless mode (open Chromium issue, unresolved since 2018)</mark>. Headed launches with <code class="rounded bg-slate-100 px-1 py-0.5 text-[11px]">--load-extension</code> work, but many enterprise extensions detect the automation context and <mark class="bg-amber-100 px-0.5 text-slate-900">silently refuse to inject tokens, populate fields, or initiate handshakes</mark>. AIVA's real-user browser session has whatever the desktop image has installed; the extensions load and operate without knowing the human is anywhere other than at the keyboard.
@@ -263,7 +263,7 @@ function demoTag(ref: { section: 'bd' | 'sr'; n: number }): { label: string; hre
 
         <details class="group mt-3 border-t border-slate-100 pt-3">
           <summary class="cursor-pointer text-sm font-medium text-slate-800">
-            How does the suite handle workflows that hand off to a native operating-system dialog?
+            <strong class="text-slate-900">Native OS dialogs:</strong> how does the suite handle workflows that hand off to a native operating-system dialog?
           </summary>
           <p class="mt-2 text-slate-600">
             Most enterprise document workflows route through a native OS dialog at some point: <em>Save As</em> for a generated report, <em>Print preview</em> when exporting to PDF without a JS-driven download, the <em>Open with</em> chooser, the <em>screen / window picker</em> raised by <code class="rounded bg-slate-100 px-1 py-0.5 text-[11px]">getDisplayMedia</code>, the modern File System Access API's <code class="rounded bg-slate-100 px-1 py-0.5 text-[11px]">showOpenFilePicker</code> / <code class="rounded bg-slate-100 px-1 py-0.5 text-[11px]">showSaveFilePicker</code>. <mark class="bg-amber-100 px-0.5 text-slate-900">These dialogs are rendered by the operating system, not the browser DOM</mark>; Playwright runs inside the browser process and has no surface to reach them. <code class="rounded bg-slate-100 px-1 py-0.5 text-[11px]">page.on('filechooser')</code> covers the simple <code class="rounded bg-slate-100 px-1 py-0.5 text-[11px]">&lt;input type="file"&gt;</code> flow, but <mark class="bg-amber-100 px-0.5 text-slate-900">anything that needs the user to name a file, pick a destination, choose a window to share, or navigate a folder tree is unreachable</mark>. AIVA operates at the OS level over VNC; the native dialog is just more pixels on the screen, recognised the same way as any other UI surface.
@@ -272,7 +272,7 @@ function demoTag(ref: { section: 'bd' | 'sr'; n: number }): { label: string; hre
 
         <details class="group mt-3 border-t border-slate-100 pt-3">
           <summary class="cursor-pointer text-sm font-medium text-slate-800">
-            How does the suite upload files to widgets that only accept HTML5 drag-and-drop from outside the browser?
+            <strong class="text-slate-900">Drag-from-OS uploads:</strong> how does the suite upload files to widgets that only accept HTML5 drag-and-drop from outside the browser?
           </summary>
           <p class="mt-2 text-slate-600">
             A growing class of upload widgets supports <em>only</em> drag-and-drop from the OS file explorer and ships no <code class="rounded bg-slate-100 px-1 py-0.5 text-[11px]">&lt;input type="file"&gt;</code> fallback &mdash; <em>Discord</em> attachments, <em>Notion</em> image blocks, several CMS media libraries, many internal corporate document portals. Playwright's <code class="rounded bg-slate-100 px-1 py-0.5 text-[11px]">setInputFiles</code> requires a literal file input to attach the bytes to; <mark class="bg-amber-100 px-0.5 text-slate-900">when the page has none, there is no DOM hook to bind to at all</mark>. The drag source lives in an OS process outside the browser sandbox, and Playwright has no API to forge a cross-process <code class="rounded bg-slate-100 px-1 py-0.5 text-[11px]">DragEvent</code> whose <code class="rounded bg-slate-100 px-1 py-0.5 text-[11px]">dataTransfer.files</code> contains real bytes. <mark class="bg-amber-100 px-0.5 text-slate-900">Synthetic <code class="rounded bg-slate-100 px-1 py-0.5 text-[11px]">DragEvent</code>s constructed via <code class="rounded bg-slate-100 px-1 py-0.5 text-[11px]">page.evaluate</code> fail on any widget that reads the actual file bytes</mark> &mdash; which is most of them, because that is the whole point. AIVA picks up a real file from the desktop file manager and drags it onto the page the way a user would.
@@ -281,7 +281,7 @@ function demoTag(ref: { section: 'bd' | 'sr'; n: number }): { label: string; hre
 
         <details class="group mt-3 border-t border-slate-100 pt-3">
           <summary class="cursor-pointer text-sm font-medium text-slate-800">
-            How does the suite reach SUTs whose content is gated by Widevine or another EME-based DRM?
+            <strong class="text-slate-900">DRM-gated content:</strong> how does the suite reach SUTs whose content is gated by Widevine or another EME-based DRM?
           </summary>
           <p class="mt-2 text-slate-600">
             A widening surface area is locked behind Encrypted Media Extensions: <em>Netflix, Spotify, Disney+</em> for media QA; <em>banking confidential-statement viewers</em>, <em>e-discovery / legal-document portals</em>, and <em>secure-payslip portals</em> for enterprise QA; <em>ProctorU, HonorLock, ExamSoft</em> and similar online-exam platforms for higher-education QA. All of them refuse to render content without a working Content Decryption Module &mdash; in practice, Google Widevine. <mark class="bg-amber-100 px-0.5 text-slate-900">Playwright's bundled Chromium is open-source Chromium without Widevine</mark>; pages that require it render as a black box, an error toast, or a fallback &ldquo;your browser does not support this content&rdquo; message. Routes around this exist (point Playwright at locally-installed Google Chrome instead of the bundled Chromium, manually fetch and stage the Widevine library) but they <mark class="bg-amber-100 px-0.5 text-slate-900">defeat the &ldquo;bundled, reproducible Playwright install&rdquo; guarantee</mark> the suite was built on. AIVA's real Linux Chrome ships Widevine as a normal browser component and renders the content the same way it does for any human viewer.
@@ -290,7 +290,7 @@ function demoTag(ref: { section: 'bd' | 'sr'; n: number }): { label: string; hre
 
         <details class="group mt-3 border-t border-slate-100 pt-3">
           <summary class="cursor-pointer text-sm font-medium text-slate-800">
-            How does the suite reach an enterprise application that arrives in the browser as an H.264 video stream painted into a single canvas?
+            <strong class="text-slate-900">Streamed-desktop sessions:</strong> how does the suite reach an enterprise application that arrives in the browser as an H.264 video stream painted into a single canvas?
           </summary>
           <p class="mt-2 text-slate-600">
             A large share of regulated and security-sensitive enterprises deliver line-of-business apps through <em>Citrix Virtual Apps &amp; Desktops</em>, <em>VMware Horizon</em>, <em>AWS WorkSpaces Web</em>, or <em>Azure Virtual Desktop</em> &mdash; the application runs on a server in a data centre, and the user's browser receives the session as an H.264 video stream painted into a single <code class="rounded bg-slate-100 px-1 py-0.5 text-[11px]">&lt;canvas&gt;</code> element. From inside the browser there is no DOM for the streamed application: <mark class="bg-amber-100 px-0.5 text-slate-900">no buttons, no inputs, no accessibility tree</mark> &mdash; just decoded video frames inside one canvas element, with mouse and keyboard events relayed back over the wire. Playwright can attach to the wrapping browser tab perfectly well, but <mark class="bg-amber-100 px-0.5 text-slate-900">the wrapping browser tab is also as far as it gets</mark> &mdash; the entire SUT lives inside an opaque pixel rectangle that no selector reaches into. A UiPath healthcare-payments case study reports that switching from selector-based attempts to AI Computer Vision dropped a Citrix VBA automation from <em>months</em> to <em>days</em>. AIVA reads the streamed pixels the way the human user does and dispatches mouse and keyboard events that the remote session decodes identically to a real operator's.
@@ -299,7 +299,7 @@ function demoTag(ref: { section: 'bd' | 'sr'; n: number }): { label: string; hre
 
         <details class="group mt-3 border-t border-slate-100 pt-3">
           <summary class="cursor-pointer text-sm font-medium text-slate-800">
-            How does the suite reach SUTs that are native desktop applications with no browser involvement at all?
+            <strong class="text-slate-900">Native thick clients:</strong> how does the suite reach SUTs that are native desktop applications with no browser involvement at all?
           </summary>
           <p class="mt-2 text-slate-600">
             A surprising amount of enterprise software is still native: the <em>WinForms</em> CRM the call centre uses, the <em>WPF</em> order-entry tool on the trading desk, the <em>Java Swing</em> claims-management app in the back office, the <em>Electron-packaged installer</em> that runs before any web UI loads, the <em>SAP GUI for Windows</em> client most ERP shops still depend on. <mark class="bg-amber-100 px-0.5 text-slate-900">Playwright is a browser automation framework</mark>; the moment the SUT is not a browser tab, there is no protocol surface for Playwright to attach to at all. Separate tools exist for desktop automation &mdash; WinAppDriver, Microsoft UI Automation, AutoIt, Sikuli, FlaUI &mdash; but they are not Playwright, do not share its API, and do not share its test runner. A team standardised on Playwright now <mark class="bg-amber-100 px-0.5 text-slate-900">maintains a second automation stack for every desktop SUT in the estate</mark>. AIVA controls the OS from outside the browser process and treats a Win32 window, a WPF window, and a browser tab uniformly &mdash; every desktop UI is just more pixels and OS-level input events.
@@ -308,7 +308,7 @@ function demoTag(ref: { section: 'bd' | 'sr'; n: number }): { label: string; hre
 
         <details class="group mt-3 border-t border-slate-100 pt-3">
           <summary class="cursor-pointer text-sm font-medium text-slate-800">
-            How does the suite reach SUTs that are not running on a desktop OS at all &mdash; physical device touchscreens with embedded firmware?
+            <strong class="text-slate-900">Embedded device UIs:</strong> how does the suite reach SUTs that are not running on a desktop OS at all &mdash; physical device touchscreens with embedded firmware?
           </summary>
           <p class="mt-2 text-slate-600">
             The hardest sealed-surface category is the one where no general-purpose OS is in the rendering path: <em>bank ATMs</em> (controlled via CEN/XFS, an internal device protocol that is not a test surface), <em>multifunction printer / scanner / copier touchscreens</em> running embedded Linux or proprietary firmware, <em>retail point-of-sale terminals</em>, <em>medical infusion-pump and monitor panels</em>, <em>industrial HMI screens</em> on factory equipment, <em>airport check-in and self-service kiosks</em>. <mark class="bg-amber-100 px-0.5 text-slate-900">There is no browser engine to attach to, no accessibility API in the rendering path, and frequently no network-reachable automation interface at all</mark> &mdash; the device is a closed appliance designed to be operated by a human standing in front of it. Playwright's scope ends at a browser tab and <mark class="bg-amber-100 px-0.5 text-slate-900">cannot reach any of these surfaces</mark>. AIVA combined with a physical robot or an external camera sees the device screen the way a service technician sees it and operates the touchscreen with a real actuator &mdash; the original design point of the product, and a category where no protocol-level automation has structural reach.
@@ -317,7 +317,7 @@ function demoTag(ref: { section: 'bd' | 'sr'; n: number }): { label: string; hre
 
         <details class="group mt-3 border-t border-slate-100 pt-3">
           <summary class="cursor-pointer text-sm font-medium text-slate-800">
-            How do you keep the same screenshot + same parsing logic returning the same result on every execution?
+            <strong class="text-slate-900">Reproducibility:</strong> how do you keep the same screenshot + same parsing logic returning the same result on every execution?
           </summary>
           <p class="mt-2 text-slate-600">
             Deterministic pipelines have this for free: <mark class="bg-amber-100 px-0.5 text-slate-900">identical input, identical output, every run, forever</mark>. LLM-driven steps surrender it &mdash; output drifts with temperature, with model version, and with silent provider-side behaviour changes between releases. <mark class="bg-amber-100 px-0.5 text-slate-900">A CI run that was green yesterday can fail today on byte-identical inputs.</mark> What anchors the suite to a stable verdict over time?
@@ -326,7 +326,7 @@ function demoTag(ref: { section: 'bd' | 'sr'; n: number }): { label: string; hre
 
         <details class="group mt-3 border-t border-slate-100 pt-3">
           <summary class="cursor-pointer text-sm font-medium text-slate-800">
-            How do you make every test verdict inspectable and explainable after the fact?
+            <strong class="text-slate-900">Auditability:</strong> how do you make every test verdict inspectable and explainable after the fact?
           </summary>
           <p class="mt-2 text-slate-600">
             When a test fails, the team needs to trace <em>why</em> &mdash; read the assertion, read the locator, follow the stack trace, find the line. A pure-code suite gives this directly. An LLM-driven step <mark class="bg-amber-100 px-0.5 text-slate-900">buries the reasoning inside opaque weights</mark>; the only post-hoc artefact is the input/output pair, <mark class="bg-amber-100 px-0.5 text-slate-900">not the chain of thought that produced the verdict</mark>. What does the team review when a model-driven assertion misfires three months later?
@@ -335,7 +335,7 @@ function demoTag(ref: { section: 'bd' | 'sr'; n: number }): { label: string; hre
 
         <details class="group mt-3 border-t border-slate-100 pt-3">
           <summary class="cursor-pointer text-sm font-medium text-slate-800">
-            How do you keep CI cost bounded by CPU time, with no remote-inference dependency to bill or fail?
+            <strong class="text-slate-900">Cost predictability:</strong> how do you keep CI cost bounded by CPU time, with no remote-inference dependency to bill or fail?
           </summary>
           <p class="mt-2 text-slate-600">
             A pure-code Playwright suite costs whatever the CI runner costs &mdash; <mark class="bg-amber-100 px-0.5 text-slate-900">flat, CPU-only, offline-capable</mark>. Every LLM-driven step becomes a paid call to a remote provider that may rate-limit, deprecate the model, or go down. Per-run cost scales with test count and prompt size; <mark class="bg-amber-100 px-0.5 text-slate-900">the suite no longer runs at all if the inference provider does not</mark>. What is the path back to bounded, offline-capable cost?
