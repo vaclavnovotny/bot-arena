@@ -192,7 +192,7 @@ function demoTag(ref: { section: 'bd' | 'sr'; n: number }): { label: string; hre
       <section class="mt-14 max-w-3xl rounded-xl border border-slate-200 bg-white p-6 text-sm">
         <h2 class="text-base font-semibold text-slate-900">Open questions for Playwright-driven teams</h2>
         <p class="mt-2 text-slate-600">
-          The 13 rows above cover failure modes selector-based automation faces today. The moment a Playwright suite adds LLM assistance &mdash; test generation, self-healing locators, agent-driven assertions &mdash; three new concerns appear in the harness itself, not in the page. How does the team plan to handle them?
+          The 13 rows above cover failure modes selector-based automation faces today. The moment a Playwright suite adds LLM assistance &mdash; test generation, self-healing locators, agent-driven assertions &mdash; five new concerns appear in the harness itself, not in the page. How does the team plan to handle them?
         </p>
 
         <h3 class="mt-4 text-sm font-semibold text-slate-900">Prompt injection from the SUT</h3>
@@ -211,12 +211,28 @@ function demoTag(ref: { section: 'bd' | 'sr'; n: number }): { label: string; hre
           An LLM-backed assertion (<em>&ldquo;Is the order confirmation visible?&rdquo;</em>) can confidently misreport state &mdash; a passing test on a broken feature, or a failing test on a working one. The testing contract assumes the assertion is a reliable witness; an LLM is not. The team needs to cross-check the model's verdict against a deterministic signal, audit accuracy against ground truth on a regular cadence, and define what happens when the LLM and the DOM disagree.
         </p>
 
-        <h3 class="mt-4 text-sm font-semibold text-slate-900">Reproducibility, auditability, cost predictability</h3>
+        <h3 class="mt-4 text-sm font-semibold text-slate-900">Reproducibility</h3>
         <p class="mt-1 font-medium text-slate-800">
-          How do you preserve reproducibility, auditability, and bounded cost when the assertion logic lives inside remote model weights?
+          How do you keep the same screenshot + same parsing logic returning the same result on every execution?
         </p>
         <p class="mt-2 text-slate-600">
-          Deterministic pipelines have these three properties for free: same screenshot + same parsing logic = same result every execution, the decision path is inspectable and explainable directly from the code, and the bill is bounded by CPU time with no cloud inference dependency. LLM-driven steps surrender all three at once &mdash; output drifts with model version and temperature, the <em>why</em> lives inside opaque weights, and every assertion becomes a paid call to a remote provider the team does not control.
+          Deterministic pipelines have this for free: identical input, identical output, every run, forever. LLM-driven steps surrender it &mdash; output drifts with temperature, with model version, and with silent provider-side behaviour changes between releases. A CI run that was green yesterday can fail today on byte-identical inputs. What anchors the suite to a stable verdict over time?
+        </p>
+
+        <h3 class="mt-4 text-sm font-semibold text-slate-900">Auditability</h3>
+        <p class="mt-1 font-medium text-slate-800">
+          How do you make every test verdict inspectable and explainable after the fact?
+        </p>
+        <p class="mt-2 text-slate-600">
+          When a test fails, the team needs to trace <em>why</em> &mdash; read the assertion, read the locator, follow the stack trace, find the line. A pure-code suite gives this directly. An LLM-driven step buries the reasoning inside opaque weights; the only post-hoc artefact is the input/output pair, not the chain of thought that produced the verdict. What does the team review when a model-driven assertion misfires three months later?
+        </p>
+
+        <h3 class="mt-4 text-sm font-semibold text-slate-900">Cost predictability</h3>
+        <p class="mt-1 font-medium text-slate-800">
+          How do you keep CI cost bounded by CPU time, with no remote-inference dependency to bill or fail?
+        </p>
+        <p class="mt-2 text-slate-600">
+          A pure-code Playwright suite costs whatever the CI runner costs &mdash; flat, CPU-only, offline-capable. Every LLM-driven step becomes a paid call to a remote provider that may rate-limit, deprecate the model, or go down. Per-run cost scales with test count and prompt size; the suite no longer runs at all if the inference provider does not. What is the path back to bounded, offline-capable cost?
         </p>
 
         <p class="mt-4 text-xs text-slate-500">
