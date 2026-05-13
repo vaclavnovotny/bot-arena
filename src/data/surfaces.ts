@@ -102,10 +102,10 @@ export const surfaces: Surface[] = [
     id: 'slider-captcha',
     title: 'Slider / drag CAPTCHA',
     family: 'vendor-challenge',
-    examples: 'GeeTest, AWS WAF Bot Control, Ticketmaster, Alibaba',
+    examples: 'GeeTest, AWS WAF Bot Control (one of several challenge types), Ticketmaster, Alibaba',
     levels: [{ section: 'sr', n: 5 }],
     expanded:
-      'The target position is a pixel offset visible only in the rendered image. Selector-based tools can find the slider element but cannot see where to drop it. AIVA\'s vision loop measures the gap and drags by the right number of pixels — same as a human — but the geometry needs tuning per vendor.',
+      'The mechanical drag is trivial in Playwright &mdash; <code>page.mouse.down/move/up</code> with jittered tracks, plus <code>page.screenshot()</code> + OpenCV template matching for gap detection, is documented in several open-source GeeTest solvers. What\'s actually blocking is the server-side scoring: GeeTest, AWS WAF, Ticketmaster, and Alibaba layer mouse-event entropy, browser fingerprint, and TLS JA3 on top of the puzzle, so solving the visual gap alone returns a stale or invalid token. Paid solver services (Capsolver, 2Captcha, SadCaptcha) sell GeeTest v3/v4 and AWS WAF endpoints. AIVA\'s vision loop measures the gap and drags by the right number of pixels &mdash; same as a human &mdash; but the geometry needs tuning per vendor.',
   }),
 
   // ─── Cross-origin / sealed ───────────────────────────────────────────
@@ -169,21 +169,21 @@ export const surfaces: Surface[] = [
   // ─── Vision-only ─────────────────────────────────────────────────────
   build({
     id: 'canvas-ui',
-    title: 'Canvas-rendered UI (Figma / Sheets / Photoshop Web)',
+    title: 'Canvas-rendered UI (Photoshop Web / Photopea / tldraw / Miro / WASM games)',
     family: 'vision-only',
-    examples: 'no DOM form — pixels only on a <code>&lt;canvas&gt;</code>',
+    examples: 'fully WASM-rendered apps; Figma and Google Sheets paint to canvas too but expose a parallel accessibility-tree DOM that Playwright can reach',
     levels: [{ section: 'sr', n: 1 }],
     expanded:
-      'Apps like Figma, Google Sheets, and Photoshop Web paint their entire UI onto a <code>&lt;canvas&gt;</code> element — there is no DOM form, no <code>&lt;input&gt;</code>, no labelled field. Selectors return nothing because there is nothing to select. AIVA reads pixels, so the canvas is just a normal interface to it.',
+      'The arena demos the worst case: a single <code>&lt;canvas&gt;</code> with no DOM at all. In production the picture is more mixed. Figma ships a parallel accessibility-tree HTML layer for screen readers, and Playwright\'s <code>getByRole</code> / <code>page.accessibility.snapshot()</code> read exactly that tree. Google Sheets renders the grid to canvas but the cell editor, formula bar, toolbar, sidebars, and menus are real DOM. The genuinely opaque cases are fully-WebAssembly apps &mdash; Photoshop Web, Photopea, tldraw, Excalidraw, Miro\'s board surface, Unity/Unreal WASM games &mdash; where Playwright is reduced to <code>page.mouse.click(x, y)</code> driven by an external OCR or template-matching pipeline. AIVA reads pixels, so the split between "has accessibility tree" and "WASM-opaque" does not matter to it.',
   }),
   build({
     id: 'image-labels',
-    title: 'Image-only labels (bank PIN / brokerage)',
+    title: 'Image-only labels (legacy PIN keypads / brokerage MFA)',
     family: 'vision-only',
-    examples: 'SVG-image labels with empty alt; no DOM text',
+    examples: 'legacy bank PIN keypads, brokerage MFA dialogs, occasional CAPTCHA-style number pads; major banks targeting WCAG 2.1/2.2 AA have largely moved away from this pattern',
     levels: [{ section: 'sr', n: 6 }],
     expanded:
-      'Bank PIN keypads and brokerage portals render every label as an inline SVG image with empty <code>alt</code> text — the label "8" is a tiny image, not a <code>&lt;text&gt;</code> node or accessible-name attribute. Playwright\'s <code>getByLabel</code> and <code>getByText</code> find nothing; only brittle structural selectors are left. AIVA reads the rendered label as a human would.',
+      'Some legacy PIN entry surfaces render every digit as an inline SVG or PNG image with empty <code>alt</code> text &mdash; the label "8" is a tiny image, not a <code>&lt;text&gt;</code> node or accessible-name attribute. Playwright\'s <code>getByLabel</code> and <code>getByText</code> find nothing; only brittle structural selectors are left. The workaround (<code>page.screenshot()</code> + OCR + coordinate clicks) is documented but brittle. Note: WCAG-AA compliance has pushed most major banks (HSBC, Barclays, Lloyds) toward hardware card readers, biometric mobile PINs, or text inputs with client-side masking, so the "every bank does this" framing is dated. AIVA reads the rendered label the same way a human would.',
   }),
 
   // ─── Windowed DOM ────────────────────────────────────────────────────

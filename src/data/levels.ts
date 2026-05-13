@@ -370,23 +370,24 @@ await page.evaluate((t) =&gt; {
     ],
     layman: {
       problem:
-        'A small but growing class of web apps draws their entire user interface inside a single <code>&lt;canvas&gt;</code> element — Figma, Google Sheets, Photoshop Web, web games. The browser sees one big rectangular pixel buffer; everything inside it (text, buttons, input boxes) is just paint. There is no DOM tree to walk, no element to grab, no label to query. A selector-based automation tool literally has nothing to interact with.',
+        'A class of web apps draws their primary UI inside a <code>&lt;canvas&gt;</code> element. The browser sees one big rectangular pixel buffer; everything inside it (text, buttons, input boxes) is just paint. The arena demos the worst case &mdash; pure canvas with no DOM elements at all. In production this is much rarer than it looks. Figma and Google Sheets render the visible grid to canvas but expose a parallel accessibility-tree DOM for screen readers (Playwright\'s <code>getByRole</code> / <code>getByLabel</code> can reach it), and Sheets\' cell editor, formula bar, sidebars, and menus are all real DOM. The genuinely opaque cases are full-WebAssembly apps like Photoshop Web, Photopea, tldraw, Excalidraw, Miro\'s board surface, and browser-based games on Unity/Unreal WASM &mdash; there the canvas really is everything.',
       workaround:
-        'An image-aware automation tool — like the classic AIVA — does not look at the DOM at all. It looks at the rendered pixels, recognises the visible "Email" text and the box right under it, and clicks at those coordinates. It then types using OS-level keystrokes, which the canvas receives as ordinary keyboard events. The DOM\'s absence is irrelevant; the pixels are the contract.',
+        'An image-aware automation tool &mdash; like the classic AIVA &mdash; does not look at the DOM at all. It looks at the rendered pixels, recognises the visible "Email" text and the box right under it, and clicks at those coordinates. It then types using OS-level keystrokes, which the canvas receives as ordinary keyboard events. The DOM\'s absence (or presence) is irrelevant; the pixels are the contract.',
     },
     playwright: {
-      kind: 'impossible',
-      label: 'Impossible without external vision',
+      kind: 'fixable',
+      difficulty: 3,
+      label: 'Accessibility-tree DOM for some apps; vision pipeline for the rest',
       notes: `
-        <p><strong>Verdict: impossible with selector-based Playwright. The DOM is empty of anything to query.</strong></p>
-        <p class="mt-2">Playwright's locator APIs all resolve to nothing here:</p>
+        <p><strong>Verdict: depends entirely on whether the canvas app ships an accessibility tree. Mixed picture in production; impossible only for the genuinely WASM-opaque apps.</strong></p>
+        <p class="mt-2">For the canonical "canvas UI" names in the wild:</p>
         <ul class="mt-2 list-disc space-y-1 pl-5">
-          <li><code>page.getByLabel('Email')</code> — no <code>&lt;label&gt;</code> element exists.</li>
-          <li><code>page.getByRole('textbox')</code> — no <code>&lt;input&gt;</code> element exists.</li>
-          <li><code>page.getByText('Sign in')</code> — the text "Sign in" is painted pixels, not a text node.</li>
+          <li><strong>Figma</strong> exposes a parallel HTML accessibility layer for screen readers (Figma's own <a href="https://www.figma.com/blog/a-step-forward-in-our-accessibility-efforts/" class="text-sky-700 underline hover:text-sky-900">accessibility blog</a>; the <a href="https://help.figma.com/hc/en-us/articles/7810391964695-Accessible-prototypes-in-Figma" class="text-sky-700 underline hover:text-sky-900">accessible-prototypes docs</a>). Playwright's <code>getByRole</code> / <code>getByLabel</code> / <code>page.accessibility.snapshot()</code> read exactly that tree.</li>
+          <li><strong>Google Sheets</strong> renders the grid to canvas (since 2021) but the cell editor, formula bar, toolbar, sidebars, and menus are all DOM with ARIA. <code>focus()</code> + <code>keyboard.type</code> on the formula bar is a documented Playwright pattern.</li>
+          <li><strong>Photoshop Web, Photopea, tldraw, Excalidraw, Miro, Unity/Unreal WASM games</strong> &mdash; these are genuinely opaque. The canvas is the whole app, no accessibility tree is exposed (see the <a href="https://dl.acm.org/doi/10.1145/3589335.3651999" class="text-sky-700 underline hover:text-sky-900">ACM 2024 study on Photoshop Web</a>). Playwright can take screenshots and use <code>page.mouse.click(x, y)</code> / <code>page.keyboard.type(...)</code> at coordinates, but those coordinates have to come from an external OCR or template-matching pipeline.</li>
         </ul>
-        <p class="mt-2">The only theoretical path is to take a screenshot from Playwright, pass it to an external OCR / template-matching pipeline to find UI elements visually, then use <code>page.mouse.click(x, y)</code> at the resolved coordinates and <code>page.keyboard.type(...)</code> to fill them. At that point you have built a worse version of the classic AIVA — and you've moved the actual automation outside Playwright entirely.</p>
-        <p class="mt-2">There is no Playwright-native way to interact with canvas-rendered UIs. This is a structural mismatch between the tool and the target, not an arms race over signals.</p>
+        <p class="mt-2">3/5 reflects this split: against most "canvas" surfaces a Playwright test can hit an accessibility tree (modest extra work, no vision pipeline); against fully-WASM apps it has to either drive coordinate-level clicks with an external recogniser or admit the surface is structurally outside selector-based automation.</p>
+        <p class="mt-2">The arena's demo (a single <code>&lt;canvas&gt;</code> with no DOM whatsoever) reproduces the WASM-app worst case &mdash; against that demo specifically, the test does need an external vision pipeline.</p>
       `,
     },
     aiva: {
