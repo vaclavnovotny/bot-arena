@@ -32,10 +32,9 @@ const familyOrder: Family[] = [
   'behavioural',
 ];
 
-const familyToSurfaces: Record<Family, typeof surfaces> = familyOrder.reduce(
-  (acc, f) => ({ ...acc, [f]: surfaces.filter((s) => s.family === f) }),
-  {} as Record<Family, typeof surfaces>,
-);
+const familyToSurfaces = Object.fromEntries(
+  familyOrder.map((f) => [f, surfaces.filter((s) => s.family === f)]),
+) as Record<Family, typeof surfaces>;
 
 const familyPillClass: Record<Family, string> = {
   'vendor-challenge': 'bg-indigo-100 text-indigo-800',
