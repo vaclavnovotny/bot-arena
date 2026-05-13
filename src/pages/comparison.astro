@@ -166,7 +166,9 @@ function demoTag(ref: { section: 'bd' | 'sr'; n: number }): { label: string; hre
                             <span class={`inline-block rounded-full px-2 py-0.5 text-[10px] font-semibold ${s.aiva.verdict === 'native' ? 'bg-emerald-100 text-emerald-800' : 'bg-blue-100 text-blue-800'}`}>
                               {s.aiva.verdict === 'native' ? 'Native' : 'Needs fix'}
                             </span>
-                            <div class="mt-1.5 flex gap-0.5" aria-label={`AIVA effort: ${s.aiva.effort} of 5`} set:html={dotRow(s.aiva.effort, 'aiva')} />
+                            {s.aiva.verdict !== 'native' && (
+                              <div class="mt-1.5 flex gap-0.5" aria-label={`AIVA effort: ${s.aiva.effort} of 5`} set:html={dotRow(s.aiva.effort, 'aiva')} />
+                            )}
                           </td>
                           <td class="px-4 py-3 align-top">
                             <a
