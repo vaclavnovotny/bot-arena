@@ -93,10 +93,10 @@ export const levels: LevelReport[] = [
     },
     playwright: {
       kind: 'fixable',
-      difficulty: 2,
-      label: 'Stealth-plugin arms race',
+      difficulty: 1,
+      label: 'One-line init-script override',
       notes: `
-        <p><strong>Verdict: technically patchable, but it's an arms race that the page always wins eventually.</strong></p>
+        <p><strong>Verdict: the canonical checks here are a single-line <code>addInitScript</code> away from passing — they are the textbook example a stealth tutorial opens with.</strong></p>
         <p class="mt-2">Each of the five remaining signals can in principle be spoofed from Playwright:</p>
         <ul class="mt-2 list-disc space-y-1 pl-5">
           <li><code>navigator.webdriver</code> can be hidden via <code>--disable-blink-features=AutomationControlled</code> plus an <code>addInitScript</code> that redefines the property.</li>
@@ -225,10 +225,10 @@ export const levels: LevelReport[] = [
     },
     playwright: {
       kind: 'fixable',
-      difficulty: 3,
-      label: 'Humanize every interaction',
+      difficulty: 4,
+      label: 'Per-interaction humanization; loses to ML defenders',
       notes: `
-        <p><strong>Verdict: bypassable for the basic checks Bot Arena does, but only by hand-rolling humanized interactions everywhere — and any sophisticated behavioural model still wins.</strong></p>
+        <p><strong>Verdict: bypassable for the basic checks the arena performs, but Bezier-curve plugins alone do not defeat Cloudflare Bot Management or DataDome's behavioural model in production.</strong></p>
         <p class="mt-2">Playwright does expose lower-level mouse APIs that <em>can</em> generate intermediate moves:</p>
         <ul class="mt-2 list-disc space-y-1 pl-5">
           <li><code>page.mouse.move(x, y, { steps: 30 })</code> emits 30 intermediate <code>mousemove</code> events along a straight line.</li>
@@ -265,19 +265,19 @@ export const levels: LevelReport[] = [
         'A VNC session runs on a real machine with a real graphics stack and a real set of fonts. The fingerprints it produces match those of millions of other real desktop Chrome installations.',
     },
     playwright: {
-      kind: 'impossible',
-      label: 'Needs real GPU for consistency',
+      kind: 'fixable',
+      difficulty: 4,
+      label: 'Stealth pack + per-vendor maintenance',
       notes: `
-        <p><strong>Verdict: effectively impossible to fix from inside Playwright without a real GPU and real fonts.</strong></p>
-        <p class="mt-2">Every individual fingerprint <em>can</em> be spoofed with an <code>addInitScript</code> hook:</p>
+        <p><strong>Verdict: solvable via stealth-class plugins, with continuous cat-and-mouse against sophisticated vendors.</strong></p>
+        <p class="mt-2">Canvas / audio / WebGL renderer / font spoofing is the headline feature of <code>puppeteer-extra-plugin-stealth</code>, <code>playwright-extra</code>'s stealth bundle, <a href="https://github.com/rebrowser/rebrowser-patches" class="text-sky-700 underline hover:text-sky-900">rebrowser-patches</a>, and Camoufox. Drop one of these into a Playwright setup and the four signals this demo measures are routinely defeated; the maintainers have already solved cross-signal consistency for the common case — a "Chrome on Windows" fingerprint package is internally coherent across canvas hash, audio waveform, WebGL renderer, and font widths.</p>
+        <p class="mt-2">The friction (4/5, not impossible) lives in the cat-and-mouse:</p>
         <ul class="mt-2 list-disc space-y-1 pl-5">
-          <li>Override <code>WebGLRenderingContext.prototype.getParameter</code> to return a fake renderer string like "Intel Iris Xe Graphics".</li>
-          <li>Patch <code>HTMLCanvasElement.prototype.toDataURL</code> and <code>getImageData</code> to return a pre-computed "real GPU" hash.</li>
-          <li>Replace <code>OfflineAudioContext.prototype.startRendering</code> to return a pre-recorded waveform.</li>
-          <li>Spoof <code>document.fonts.check</code> and the font-width measurement trick to claim the right font set.</li>
+          <li>Detection vendors publish writeups identifying new tells in stealth packages and patch around them — see <a href="https://datadome.co/threat-research/how-datadome-detects-puppeteer-extra-stealth/" class="text-sky-700 underline hover:text-sky-900">DataDome on stealth's iframe-contentWindow leak</a>.</li>
+          <li>Rebrowser-patches and Camoufox ship as continuously-updated drop-ins; staying current means tracking releases on the same cadence as the detection vendors.</li>
+          <li>Higher-end defenders (Akamai) have moved primary detection to TLS-level fingerprinting (JA3/JA4), which neither stealth nor patched Playwright addresses on its own — that adds another tooling layer.</li>
         </ul>
-        <p class="mt-2">The trap: <strong>internal consistency</strong>. If you claim "Intel Iris Xe Graphics" for WebGL, your canvas pixel hash needs to match what an actual Intel iGPU produces — and that hash depends on subtle floating-point rounding, anti-aliasing kernels, and driver-specific quirks. Without the actual hardware you cannot reproduce it. Detection services maintain databases of <em>valid combinations</em>: GPU X must produce canvas hash within set Y for fonts Z. Spoofing one signal in isolation creates a contradiction with the others, which is itself a stronger signal than the original tell.</p>
-        <p class="mt-2">This is where Playwright fundamentally loses against any site doing real fingerprint-based bot detection.</p>
+        <p class="mt-2">For the named vendors and most production-grade detection, a Playwright suite picks a stealth stack and accepts a perpetual maintenance overhead. Not impossible, not trivial.</p>
       `,
     },
     aiva: {

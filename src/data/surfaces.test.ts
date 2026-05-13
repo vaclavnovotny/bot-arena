@@ -32,7 +32,7 @@ describe('surfaces data module', () => {
 
     const behavioural = surfaces.find((s) => s.id === 'behavioural');
     expect(behavioural).toBeDefined();
-    expect(behavioural!.playwright).toEqual({ verdict: 'possible', effort: 3 });
+    expect(behavioural!.playwright).toEqual({ verdict: 'possible', effort: 4 });
     expect(behavioural!.aiva).toEqual({ verdict: 'native', effort: 1 });
 
     const canvas = surfaces.find((s) => s.id === 'canvas-ui');

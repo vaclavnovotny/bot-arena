@@ -91,12 +91,12 @@ export const surfaces: Surface[] = [
   // ─── Vendor challenge ────────────────────────────────────────────────
   build({
     id: 'cloudflare-turnstile',
-    title: 'Cloudflare Turnstile (managed mode)',
+    title: 'Managed CAPTCHA (Turnstile / hCaptcha / Arkose)',
     family: 'vendor-challenge',
-    examples: 'Cloudflare-fronted sign-ins, hCaptcha managed, Arkose Labs',
+    examples: 'Cloudflare-fronted sign-ins, hCaptcha managed mode, Arkose FunCaptcha &mdash; closed-source client challenge + server-side token verification',
     levels: [{ section: 'bd', n: 5 }],
     expanded:
-      'Third-party challenges run in a sandboxed iframe with server-side verification — the browser can render the widget, but only a real interactive user can pass it. Playwright cannot solve the challenge; agentic-AIVA can drive the challenge UI from the OS side but still needs configuration to avoid being scored as a bot.',
+      'Third-party challenges run in a sandboxed iframe with server-side verification &mdash; the browser can render the widget, but only a real interactive user can pass it. Cloudflare Turnstile is the arena\'s specific demo; hCaptcha managed and Arkose FunCaptcha share the same architecture. Playwright cannot solve the production challenge on its own; paid solver services (Capsolver, 2Captcha, CapMonster) offer endpoints for all three vendors at a few cents per solve, which moves the problem from "impossible" to "outsourced to a third-party human-or-stealth farm". Agentic-AIVA can drive the challenge UI but still needs configuration to avoid being scored as a bot.',
   }),
   build({
     id: 'slider-captcha',
@@ -142,10 +142,10 @@ export const surfaces: Surface[] = [
     id: 'fingerprint-battery',
     title: 'Fingerprint battery (canvas / audio / WebGL / fonts)',
     family: 'fingerprinting',
-    examples: 'Akamai, DataDome, PerimeterX — every commercial bot screen',
+    examples: 'DataDome, PerimeterX, Imperva, Kasada &mdash; the headline signals every commercial bot screen samples (Akamai has shifted primarily to TLS-level fingerprinting)',
     levels: [{ section: 'bd', n: 4 }],
     expanded:
-      'Bot screens fingerprint the browser through canvas rendering, audio context, WebGL renderer string, and installed fonts. Faking all four consistently from inside the browser is essentially impossible without a real GPU and font set. AIVA runs in a regular desktop Chrome on a real Linux machine, so the fingerprint is genuinely a human\'s.',
+      'Bot screens fingerprint the browser through canvas rendering, audio context, WebGL renderer string, and installed fonts. Stealth-class plugins (<code>puppeteer-extra-plugin-stealth</code>, <code>rebrowser-patches</code>, Camoufox) handle the headline signals as their core competency &mdash; drop one in and stock Playwright passes the basic checks. The friction lives in the cat-and-mouse: detection vendors publish writeups identifying new tells (DataDome documents stealth\'s iframe-contentWindow leak), and staying current means tracking continuous package updates. AIVA runs in a regular desktop Chrome on a real Linux machine, so the fingerprint is genuinely a human\'s with no maintenance overhead.',
   }),
   build({
     id: 'cdp-attached',
