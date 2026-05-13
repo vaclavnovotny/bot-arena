@@ -58,6 +58,7 @@ export function deriveVerdicts(level: LevelReport): Pick<Surface, 'playwright' |
   if (fixes.length === 0) {
     throw new Error(`Level ${level.section} ${level.n} has passes=false but no fixes`);
   }
+  // fixes.length > 0 is guaranteed by the guard above; Math.min is safe.
   const minEffort = Math.min(
     ...fixes.map((f) => (f.kind === 'fixable' ? f.difficulty : 5)),
   ) as 1 | 2 | 3 | 4 | 5;

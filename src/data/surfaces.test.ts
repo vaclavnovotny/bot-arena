@@ -23,4 +23,16 @@ describe('surfaces data module', () => {
       }
     }
   });
+
+  it('produces known verdicts for representative surfaces', () => {
+    const turnstile = surfaces.find((s) => s.id === 'cloudflare-turnstile');
+    expect(turnstile).toBeDefined();
+    expect(turnstile!.playwright).toEqual({ verdict: 'impossible', effort: 5 });
+    expect(turnstile!.aiva).toEqual({ verdict: 'needs-fix', effort: 4 });
+
+    const behavioural = surfaces.find((s) => s.id === 'behavioural');
+    expect(behavioural).toBeDefined();
+    expect(behavioural!.playwright).toEqual({ verdict: 'possible', effort: 3 });
+    expect(behavioural!.aiva).toEqual({ verdict: 'native', effort: 1 });
+  });
 });
