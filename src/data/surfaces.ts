@@ -28,11 +28,12 @@ export interface Surface {
   };
 }
 
-/** Look up a level by its LevelRef. */
+/** Look up a level by its LevelRef. `ref.n` is local-within-section (BD: 1..5, SR: 1..8). */
 export function resolveLevel(ref: LevelRef): LevelReport {
   const sectionName: LevelReport['section'] =
     ref.section === 'bd' ? 'Bot detection' : 'Selector resistance';
-  const level = levels.find((l) => l.section === sectionName && l.n === ref.n);
+  const sectionLevels = levels.filter((l) => l.section === sectionName);
+  const level = sectionLevels[ref.n - 1];
   if (!level) {
     throw new Error(`Surface references unknown level: ${ref.section.toUpperCase()}-${ref.n}`);
   }
@@ -95,7 +96,7 @@ export const surfaces: Surface[] = [
     title: 'Slider / drag CAPTCHA',
     family: 'vendor-challenge',
     examples: 'GeeTest, AWS WAF Bot Control, Ticketmaster, Alibaba',
-    levels: [{ section: 'sr', n: 10 }],
+    levels: [{ section: 'sr', n: 5 }],
     expanded:
       'The target position is a pixel offset visible only in the rendered image. Selector-based tools can find the slider element but cannot see where to drop it. AIVA\'s vision loop measures the gap and drags by the right number of pixels — same as a human — but the geometry needs tuning per vendor.',
   }),
@@ -106,7 +107,7 @@ export const surfaces: Surface[] = [
     title: 'Cross-origin iframe (Stripe / Auth0 / Turnstile widget)',
     family: 'cross-origin',
     examples: 'Stripe Elements, Auth0 Universal Login, sandboxed payment & SSO',
-    levels: [{ section: 'sr', n: 12 }],
+    levels: [{ section: 'sr', n: 7 }],
     expanded:
       'The form lives on a different origin from the host page. Browser security blocks every selector from reaching into the iframe — <code>frameLocator</code> works for same-origin frames, but cross-origin (Stripe, Auth0) and sandboxed widgets are firmly off-limits. AIVA drives at the OS level, so frame boundaries are invisible to it; the small fix is a routing tweak so the recogniser scopes to the iframe region.',
   }),
@@ -115,7 +116,7 @@ export const surfaces: Surface[] = [
     title: 'Closed Shadow DOM (Salesforce LWC / SAP UI5 / ServiceNow)',
     family: 'cross-origin',
     examples: 'enterprise apps built on sealed web components',
-    levels: [{ section: 'sr', n: 8 }],
+    levels: [{ section: 'sr', n: 3 }],
     expanded:
       'A web component declared with <code>attachShadow({ mode: \'closed\' })</code> walls off its inner DOM from any outside script. No selector — <code>querySelector</code>, <code>getByLabel</code>, <code>evaluate</code> — can cross the boundary. Visual automation reads pixels, so the seal is irrelevant; AIVA passes natively.',
   }),
@@ -124,7 +125,7 @@ export const surfaces: Surface[] = [
     title: 'Same-origin embedded widget',
     family: 'cross-origin',
     examples: 'older same-origin payment & SSO iframes',
-    levels: [{ section: 'sr', n: 9 }],
+    levels: [{ section: 'sr', n: 4 }],
     expanded:
       'Older payment and SSO forms commonly live inside same-origin iframes. Page-scoped locators do not traverse frames, so the default <code>getByLabel(\'Email\')</code> call misses entirely. Playwright can recover with <code>page.frameLocator(...)</code>, but every test that touches the widget needs to be frame-aware. AIVA does not see frames at all.',
   }),
@@ -164,7 +165,7 @@ export const surfaces: Surface[] = [
     title: 'Canvas-rendered UI (Figma / Sheets / Photoshop Web)',
     family: 'vision-only',
     examples: 'no DOM form — pixels only on a <code>&lt;canvas&gt;</code>',
-    levels: [{ section: 'sr', n: 6 }],
+    levels: [{ section: 'sr', n: 1 }],
     expanded:
       'Apps like Figma, Google Sheets, and Photoshop Web paint their entire UI onto a <code>&lt;canvas&gt;</code> element — there is no DOM form, no <code>&lt;input&gt;</code>, no labelled field. Selectors return nothing because there is nothing to select. AIVA reads pixels, so the canvas is just a normal interface to it.',
   }),
@@ -173,7 +174,7 @@ export const surfaces: Surface[] = [
     title: 'Image-only labels (bank PIN / brokerage)',
     family: 'vision-only',
     examples: 'SVG-image labels with empty alt; no DOM text',
-    levels: [{ section: 'sr', n: 11 }],
+    levels: [{ section: 'sr', n: 6 }],
     expanded:
       'Bank PIN keypads and brokerage portals render every label as an inline SVG image with empty <code>alt</code> text — the label "8" is a tiny image, not a <code>&lt;text&gt;</code> node or accessible-name attribute. Playwright\'s <code>getByLabel</code> and <code>getByText</code> find nothing; only brittle structural selectors are left. AIVA reads the rendered label as a human would.',
   }),
@@ -184,7 +185,7 @@ export const surfaces: Surface[] = [
     title: 'Virtual scrolling / windowed list',
     family: 'windowed-dom',
     examples: 'AG Grid, TanStack Virtual, Slack history, Gmail, Notion databases',
-    levels: [{ section: 'sr', n: 13 }],
+    levels: [{ section: 'sr', n: 8 }],
     expanded:
       'Modern data-grids (AG Grid, TanStack Virtual, Slack history, Notion databases) render only the rows currently in the viewport. A test that wants the 500th row has to know the list is virtualised, know the row height, and dispatch programmatic scrolls. AIVA\'s vision loop already scrolls-and-looks the way a human does — no list-specific code.',
   }),
@@ -195,7 +196,7 @@ export const surfaces: Surface[] = [
     title: 'Dynamic / randomised selectors',
     family: 'dynamic-selectors',
     examples: 'CSS-in-JS apps, anti-bot WAFs, ticketing / sneaker drops',
-    levels: [{ section: 'sr', n: 7 }],
+    levels: [{ section: 'sr', n: 2 }],
     expanded:
       'CSS-in-JS frameworks and anti-bot WAFs rotate every <code>id</code>, <code>name</code>, and <code>class</code> per request, so the locator that worked yesterday is dead today. Tests fall back to structural anchors that break the moment the page is refactored. AIVA does not depend on selectors at all — labels and positions on screen are stable across rerolls.',
   }),
