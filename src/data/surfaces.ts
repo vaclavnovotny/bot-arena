@@ -32,7 +32,9 @@ export interface Surface {
 export function resolveLevel(ref: LevelRef): LevelReport {
   const sectionName: LevelReport['section'] =
     ref.section === 'bd' ? 'Bot detection' : 'Selector resistance';
-  const sectionLevels = levels.filter((l) => l.section === sectionName);
+  const sectionLevels = levels
+    .filter((l) => l.section === sectionName)
+    .sort((a, b) => a.n - b.n);
   const level = sectionLevels[ref.n - 1];
   if (!level) {
     throw new Error(`Surface references unknown level: ${ref.section.toUpperCase()}-${ref.n}`);
@@ -73,6 +75,11 @@ export function deriveVerdicts(level: LevelReport): Pick<Surface, 'playwright' |
   };
 }
 
+/**
+ * Builds a Surface by deriving playwright/aiva verdicts from its first (primary) level.
+ * v1 has exactly one level per surface; multi-level aggregation is reserved for future use,
+ * and additional entries in `partial.levels` are currently ignored.
+ */
 function build(
   partial: Omit<Surface, 'playwright' | 'aiva'>,
 ): Surface {

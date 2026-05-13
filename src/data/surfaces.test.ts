@@ -34,5 +34,10 @@ describe('surfaces data module', () => {
     expect(behavioural).toBeDefined();
     expect(behavioural!.playwright).toEqual({ verdict: 'possible', effort: 3 });
     expect(behavioural!.aiva).toEqual({ verdict: 'native', effort: 1 });
+
+    const canvas = surfaces.find((s) => s.id === 'canvas-ui');
+    expect(canvas).toBeDefined();
+    expect(canvas!.playwright).toEqual({ verdict: 'impossible', effort: 5 });
+    expect(canvas!.aiva).toEqual({ verdict: 'native', effort: 1 });
   });
 });
