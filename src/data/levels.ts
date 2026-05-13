@@ -650,23 +650,29 @@ await expect(frame.getByText('Access granted')).toBeVisible();</pre>
     ],
     layman: {
       problem:
-        'When you embed a third-party widget like a Stripe card form, an Auth0 hosted login, or a Cloudflare Turnstile challenge, that widget runs in a separate browser-level sandbox loaded from a different origin (a different domain). The browser\'s same-origin security policy prohibits the host page — and any test framework running in the host page\'s context — from reading or interacting with the widget\'s internals. This is by design: it is what stops malicious sites from stealing credit-card details from embedded payment forms. The unavoidable side effect is that automated tests cannot reach in either.',
+        'When a form is embedded in an iframe — like a Stripe payment field — the canonical Playwright pattern <code>page.getByLabel(\'Email\').fill(...)</code> fails because it is scoped to the main frame, and the form is in a child frame. Same-origin policy prevents <em>scripts running in the host page</em> from reaching the widget\'s internals — but Playwright is not such a script. It operates outside the page\'s JS sandbox and has a dedicated <code>frameLocator</code> API for descending into iframes (including cross-origin ones). The arena\'s demo amplifies the trap by using a <code>data:</code> URI, which has an opaque origin that defeats URL-based frame matching; selector-based <code>frameLocator(\'iframe\')</code> still works in principle.',
       workaround:
-        'AIVA does not look at the DOM. Its input is the composited screenshot, which the browser draws cross-origin content into exactly like everything else. The Stripe card field, the Auth0 dialog, the Turnstile box — all visible as pixels in one image. AIVA sees one rectangle of pixels with an "Email" label and clicks the input.',
+        'AIVA does not look at the DOM. Its input is the composited screenshot, where the browser draws cross-origin content into the same image as everything else. The Stripe card field, the iframe contents — all visible as pixels. AIVA sees the "Email" label and clicks the input below it, with no special-case code for frames.',
     },
     playwright: {
-      kind: 'impossible',
-      label: 'Browser security; literally impossible',
+      kind: 'fixable',
+      difficulty: 3,
+      label: 'frameLocator + stable inner selectors',
       notes: `
-        <p><strong>Verdict: this is a hard ceiling enforced by the browser security model, not by Playwright.</strong></p>
-        <p class="mt-2">Cross-origin iframes are sandboxed by the same-origin policy. The browser does not let any JavaScript in the parent page (including Playwright's injected scripts) read or write content in a cross-origin frame. <code>page.frameLocator</code> can list cross-origin iframes but cannot script into them.</p>
-        <p class="mt-2">For real third-party widgets (Stripe Elements, Auth0, Turnstile) the only supported automation paths are:</p>
+        <p><strong>Verdict: solvable in Playwright via <code>frameLocator</code>. Same-origin policy restricts scripts running on the parent page, not the automation driver itself.</strong></p>
+        <p class="mt-2">Playwright talks to the browser via its own protocol (CDP+ in Chromium), and Chromium reassigns the tracked session to an out-of-process iframe when one is detected. So <code>page.frameLocator(...)</code>, <code>page.frame(...)</code>, and <code>locator.contentFrame()</code> all work across origins. Stripe ships official Playwright testing patterns for filling card fields inside their iframe:</p>
+        <pre class="mt-2 overflow-x-auto rounded bg-slate-900 p-3 font-mono text-[11px] leading-relaxed text-slate-100">await page
+  .frameLocator('iframe[name^="__privateStripeFrame"]')
+  .locator('[data-elements-stable-field-name="cardNumber"]')
+  .fill('4242424242424242');</pre>
+        <p class="mt-2">The friction is real but not categorical:</p>
         <ul class="mt-2 list-disc space-y-1 pl-5">
-          <li>Use the vendor's test mode + their own SDK. Stripe ships a <code>cardElement.update()</code> helper in test mode; Auth0 has Lock mock APIs.</li>
-          <li>Run a parallel test against the iframe URL directly, with no shared session state with the host page. This breaks any flow that needs the host's auth state.</li>
-          <li>Pay a third-party solver to operate the widget in a real browser and inject the resulting token.</li>
+          <li>Test authors must know which iframe holds the target field (selectors like <code>iframe[name="*"]</code> or positional indices).</li>
+          <li>Stable inner selectors are vendor-supplied — Stripe gives <code>data-elements-stable-field-name</code>; not every widget does.</li>
+          <li>The arena's <code>data:</code> URI variant is harder than typical cross-origin iframes because the opaque origin defeats URL-based frame matching, but selector-based matching still works.</li>
+          <li>Network-response interception across out-of-process iframes has known limitations (see <a href="https://github.com/microsoft/playwright/issues/20809" class="text-sky-700 underline hover:text-sky-900">#20809</a>) — relevant if the test needs to inspect the iframe's traffic.</li>
         </ul>
-        <p class="mt-2">None of these is "your test calling page.getByLabel('Email').fill(...)". The Playwright-native solution does not exist by design.</p>
+        <p class="mt-2"><strong>The real-world examples need correction.</strong> Auth0 Universal Login is not embedded as an iframe in production — Auth0 sets <code>X-Frame-Options: deny</code>, so the login flow is a top-level navigation to <code>*.auth0.com</code> that Playwright fills directly. Cloudflare Turnstile <em>is</em> a cross-origin iframe, but the friction is fingerprinting + behavioural scoring + server-side token verification, not the iframe boundary — that belongs in Bot Detection level 5. Stripe Elements is the one genuine cross-origin iframe case from the original list, and Playwright handles it routinely.</p>
       `,
     },
     aiva: {

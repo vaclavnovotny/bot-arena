@@ -111,12 +111,12 @@ export const surfaces: Surface[] = [
   // ─── Cross-origin / sealed ───────────────────────────────────────────
   build({
     id: 'cross-origin-iframe',
-    title: 'Cross-origin iframe (Stripe / Auth0 / Turnstile widget)',
+    title: 'Cross-origin iframe (Stripe Elements / embedded widgets)',
     family: 'cross-origin',
-    examples: 'Stripe Elements, Auth0 Universal Login, sandboxed payment & SSO',
+    examples: 'embedded third-party iframes &mdash; Stripe Elements card fields, YouTube / Vimeo players, social embeds',
     levels: [{ section: 'sr', n: 7 }],
     expanded:
-      'The form lives on a different origin from the host page. Browser security blocks every selector from reaching into the iframe — <code>frameLocator</code> works for same-origin frames, but cross-origin (Stripe, Auth0) and sandboxed widgets are firmly off-limits. AIVA drives at the OS level, so frame boundaries are invisible to it; the small fix is a routing tweak so the recogniser scopes to the iframe region.',
+      'Playwright operates outside the page\'s JS sandbox, so <code>frameLocator</code> reaches into cross-origin iframes routinely &mdash; Stripe even ships official Playwright testing patterns for filling card fields. The friction is real but not categorical: test authors must know which iframe holds the target and need stable inner selectors. The arena\'s <code>data:</code> URI demo is a corner case (opaque origins defeat URL-based frame matching) but selector-based matching still works. Auth0 Universal Login is <em>not</em> an iframe in production (X-Frame-Options blocks embedding, it is a top-level redirect); Cloudflare Turnstile is a separate vendor-challenge problem covered in BD-5, not an iframe-boundary problem. AIVA reads pixels, so frame boundaries are invisible to it.',
   }),
   build({
     id: 'closed-shadow-dom',
