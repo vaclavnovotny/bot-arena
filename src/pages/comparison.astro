@@ -46,8 +46,20 @@ const familyPillClass: Record<Family, string> = {
   'behavioural': 'bg-violet-100 text-violet-800',
 };
 
-function dotRow(effort: number, tone: 'pw' | 'aiva'): string {
-  const onColor = tone === 'pw' ? 'bg-rose-600' : 'bg-emerald-600';
+// Unified effort scale shared by Playwright and AIVA rows: 1 = green, 5 = super
+// red, 2/3/4 stepping smoothly between them. The colour reflects how much work
+// the row demands, not which tool's row it is.
+function dotRow(effort: number): string {
+  const onColor =
+    effort === 1
+      ? 'bg-emerald-500'
+      : effort === 2
+      ? 'bg-lime-500'
+      : effort === 3
+      ? 'bg-amber-500'
+      : effort === 4
+      ? 'bg-orange-500'
+      : 'bg-red-600';
   return [1, 2, 3, 4, 5]
     .map((i) =>
       i <= effort
@@ -160,14 +172,14 @@ function demoTag(ref: { section: 'bd' | 'sr'; n: number }): { label: string; hre
                             <span class={`inline-block rounded-full px-2 py-0.5 text-[10px] font-semibold ${s.playwright.verdict === 'impossible' ? 'bg-rose-100 text-rose-800' : 'bg-orange-100 text-orange-800'}`}>
                               {s.playwright.verdict === 'impossible' ? 'Impossible' : 'Possible'}
                             </span>
-                            <div class="mt-1.5 flex gap-0.5" aria-label={`Playwright effort: ${s.playwright.effort} of 5`} set:html={dotRow(s.playwright.effort, 'pw')} />
+                            <div class="mt-1.5 flex gap-0.5" aria-label={`Playwright effort: ${s.playwright.effort} of 5`} set:html={dotRow(s.playwright.effort)} />
                           </td>
                           <td class="px-4 py-3 align-top">
                             <span class={`inline-block rounded-full px-2 py-0.5 text-[10px] font-semibold ${s.aiva.verdict === 'native' ? 'bg-emerald-100 text-emerald-800' : 'bg-blue-100 text-blue-800'}`}>
                               {s.aiva.verdict === 'native' ? 'Native' : 'Needs fix'}
                             </span>
                             {s.aiva.verdict !== 'native' && (
-                              <div class="mt-1.5 flex gap-0.5" aria-label={`AIVA effort: ${s.aiva.effort} of 5`} set:html={dotRow(s.aiva.effort, 'aiva')} />
+                              <div class="mt-1.5 flex gap-0.5" aria-label={`AIVA effort: ${s.aiva.effort} of 5`} set:html={dotRow(s.aiva.effort)} />
                             )}
                           </td>
                           <td class="px-4 py-3 align-top">
