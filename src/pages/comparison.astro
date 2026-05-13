@@ -149,7 +149,7 @@ function demoTag(ref: { section: 'bd' | 'sr'; n: number }): { label: string; hre
                           class="border-t border-slate-200 cursor-pointer hover:bg-slate-50 focus:outline focus:outline-2 focus:outline-sky-500"
                           data-row={s.id}
                           tabindex="0"
-                          role="button"
+                          aria-label={`${s.title} — click to expand details`}
                           aria-expanded="false"
                           aria-controls={`detail-${s.id}`}
                         >
@@ -161,13 +161,13 @@ function demoTag(ref: { section: 'bd' | 'sr'; n: number }): { label: string; hre
                             <span class={`inline-block rounded-full px-2 py-0.5 text-[10px] font-semibold ${s.playwright.verdict === 'impossible' ? 'bg-rose-100 text-rose-800' : 'bg-orange-100 text-orange-800'}`}>
                               {s.playwright.verdict === 'impossible' ? 'Impossible' : 'Possible'}
                             </span>
-                            <div class="mt-1.5 flex gap-0.5" aria-label={`Effort: ${s.playwright.effort} of 5`} set:html={dotRow(s.playwright.effort, 'pw')} />
+                            <div class="mt-1.5 flex gap-0.5" aria-label={`Playwright effort: ${s.playwright.effort} of 5`} set:html={dotRow(s.playwright.effort, 'pw')} />
                           </td>
                           <td class="px-4 py-3 align-top">
                             <span class={`inline-block rounded-full px-2 py-0.5 text-[10px] font-semibold ${s.aiva.verdict === 'native' ? 'bg-emerald-100 text-emerald-800' : 'bg-blue-100 text-blue-800'}`}>
                               {s.aiva.verdict === 'native' ? 'Native' : 'Needs fix'}
                             </span>
-                            <div class="mt-1.5 flex gap-0.5" aria-label={`Effort: ${s.aiva.effort} of 5`} set:html={dotRow(s.aiva.effort, 'aiva')} />
+                            <div class="mt-1.5 flex gap-0.5" aria-label={`AIVA effort: ${s.aiva.effort} of 5`} set:html={dotRow(s.aiva.effort, 'aiva')} />
                           </td>
                           <td class="px-4 py-3 align-top">
                             <a
@@ -211,16 +211,14 @@ function demoTag(ref: { section: 'bd' | 'sr'; n: number }): { label: string; hre
     <script is:inline>
       function toggleRow(row) {
         const id = row.getAttribute('data-row');
-        const detail = document.querySelector('[data-detail="' + id + '"]');
+        const detail = document.querySelector(`[data-detail="${id}"]`);
         if (!detail) return;
         const isOpen = !detail.classList.contains('hidden');
         if (isOpen) {
           detail.classList.add('hidden');
-          row.removeAttribute('data-expanded');
           row.setAttribute('aria-expanded', 'false');
         } else {
           detail.classList.remove('hidden');
-          row.setAttribute('data-expanded', '');
           row.setAttribute('aria-expanded', 'true');
         }
       }
@@ -229,7 +227,7 @@ function demoTag(ref: { section: 'bd' | 'sr'; n: number }): { label: string; hre
         row.addEventListener('click', () => toggleRow(row));
         row.addEventListener('keydown', (e) => {
           if (e.key === 'Enter' || e.key === ' ') {
-            e.preventDefault();
+            e.preventDefault(); // prevent page scroll on Space
             toggleRow(row);
           }
         });
