@@ -205,10 +205,10 @@ function demoTag(ref: { section: 'bd' | 'sr'; n: number }): { label: string; hre
 
         <h3 class="mt-4 text-sm font-semibold text-slate-900">Hallucinated state checks</h3>
         <p class="mt-1 font-medium text-slate-800">
-          How does the suite stay a reliable witness when an LLM is the one signing the verdict?
+          When the LLM orchestrates the test flow, how do you stop it from cheating its own checks &mdash; given that hallucination is an inherent property of the model?
         </p>
         <p class="mt-2 text-slate-600">
-          An LLM-backed assertion (<em>&ldquo;Is the order confirmation visible?&rdquo;</em>) can confidently misreport state &mdash; a passing test on a broken feature, or a failing test on a working one. The testing contract assumes the assertion is a reliable witness; an LLM is not. The team needs to cross-check the model's verdict against a deterministic signal, audit accuracy against ground truth on a regular cadence, and define what happens when the LLM and the DOM disagree.
+          If the LLM both drives the flow and decides whether each step passed, it can hallucinate success and skip ahead with no external signal that anything is wrong. None of the in-band escape routes hold: a second LLM as judge doubles the cost and inherits the same hallucination and prompt-injection failure modes &mdash; both judges can hallucinate; manual human review does not scale to a CI suite; statistical anomaly detection over token streams catches only the gross outliers. The only architecture that closes the loop is a <em>deterministic</em> orchestrator that makes the checkpoint unskippable, and a <em>deterministic</em> check that compares observed state to expected state &mdash; and by definition neither can be an LLM. Where does the suite draw the line between LLM-suggested action and machine-verified outcome?
         </p>
 
         <h3 class="mt-4 text-sm font-semibold text-slate-900">CDP unavailability in policy-managed browsers</h3>
