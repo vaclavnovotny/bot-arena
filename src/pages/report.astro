@@ -755,14 +755,22 @@ function fixStyles(difficulty: number) {
   return { dotClasses, labelColor };
 }
 
+const TEST_SPEC_PATH = 'playwright/levels.spec.ts';
+const TEST_SPEC_BLOB_URL = `https://github.com/vaclavnovotny/bot-arena/blob/main/${TEST_SPEC_PATH}`;
+
 const levelData = levels.map((lvl) => {
   const localN = lvl.section === 'Bot detection' ? lvl.n : lvl.n - 5;
   const sectionSlug = lvl.section === 'Bot detection' ? 'bot-detection' : 'selector-resistance';
+  const sectionStartLine = lvl.section === 'Bot detection' ? 4 : 46;
+  const testStartLine = sectionStartLine + (localN - 1) * 8;
+  const testEndLine = testStartLine + 6;
   return {
     ...lvl,
     localN,
     sectionSlug,
     urlPath: `/${sectionSlug}/level-${localN}/`,
+    testSourceUrl: `${TEST_SPEC_BLOB_URL}#L${testStartLine}-L${testEndLine}`,
+    testSourceLabel: `${TEST_SPEC_PATH}:${testStartLine}-${testEndLine}`,
     playwrightViz:
       lvl.playwright.kind === 'fixable' ? fixStyles(lvl.playwright.difficulty) : null,
     aivaFixesViz:
@@ -913,9 +921,19 @@ const groupedLevels = (
 
             <div class="mt-6 grid gap-6 lg:grid-cols-2">
               <div>
-                <h3 class="text-sm font-semibold uppercase tracking-wide text-slate-500">
-                  What the test does
-                </h3>
+                <div class="flex flex-wrap items-baseline justify-between gap-2">
+                  <h3 class="text-sm font-semibold uppercase tracking-wide text-slate-500">
+                    What the test does
+                  </h3>
+                  <a
+                    href={lvl.testSourceUrl}
+                    class="font-mono text-[11px] text-slate-500 hover:text-slate-900 hover:underline"
+                    target="_blank"
+                    rel="noopener"
+                  >
+                    {lvl.testSourceLabel} ↗
+                  </a>
+                </div>
                 <div class="mt-2 overflow-x-auto rounded-lg bg-slate-900 text-xs">
                   <Code code={lvl.testCode} lang="ts" theme="github-dark" />
                 </div>
