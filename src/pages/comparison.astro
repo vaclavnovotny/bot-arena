@@ -317,10 +317,10 @@ function demoTag(ref: { section: 'bd' | 'sr'; n: number }): { label: string; hre
 
         <details class="group mt-3 border-t border-slate-100 pt-3">
           <summary class="cursor-pointer text-sm font-medium text-slate-800">
-            <strong class="text-slate-900">Auditability:</strong> how do you make every test verdict inspectable and explainable after the fact?
+            <strong class="text-slate-900">Auditability:</strong> when the automation fails, how do you get to the <em>why</em> when LLMs are in the loop?
           </summary>
           <p class="mt-2 text-slate-600">
-            When a test fails, the team needs to trace <em>why</em> &mdash; read the assertion, read the locator, follow the stack trace, find the line. A pure-code suite gives this directly. An LLM-driven step <mark class="bg-amber-100 px-0.5 text-slate-900">buries the reasoning inside opaque weights</mark>; the only post-hoc artefact is the input/output pair, <mark class="bg-amber-100 px-0.5 text-slate-900">not the chain of thought that produced the verdict</mark>. What does the team review when a model-driven assertion misfires three months later?
+            When automation fails &mdash; in a CI run, a scheduled job, a production agent &mdash; the operator needs to trace <em>why</em>: what input the system saw, what decision it made, what reasoning got it there. A pure-code automation gives this directly: read the input, follow the control flow, find the line that produced the wrong action; stack traces and logs make the path obvious. An LLM-driven step <mark class="bg-amber-100 px-0.5 text-slate-900">buries the reasoning inside opaque weights</mark>; the only post-hoc artefact is the input/output pair, <mark class="bg-amber-100 px-0.5 text-slate-900">not the chain of thought that produced the decision</mark>. What does the team review when an LLM-driven step misfires three months later, after the model version has shifted, the prompt has been iterated, and the failing run is gone from the inference provider's retention window?
           </p>
         </details>
 
