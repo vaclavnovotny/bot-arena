@@ -192,7 +192,15 @@ function demoTag(ref: { section: 'bd' | 'sr'; n: number }): { label: string; hre
       <section class="mt-14 max-w-3xl rounded-xl border border-slate-200 bg-white p-6 text-sm">
         <h2 class="text-base font-semibold text-slate-900">Open questions for Playwright-driven teams</h2>
         <p class="mt-2 text-slate-600">
-          The 13 rows above cover failure modes selector-based automation faces today. The moment a Playwright suite adds LLM assistance &mdash; test generation, self-healing locators, agent-driven assertions &mdash; five new concerns appear in the harness itself, not in the page. How does the team plan to handle them?
+          The 13 rows above cover failure modes selector-based automation faces in the page. Six more concerns live above the level pages, in the harness that runs Playwright. One is structural &mdash; how Playwright reaches an enterprise SUT at all when the browser is policy-locked. The other five appear the moment the suite reaches for LLM assistance &mdash; test generation, self-healing locators, agent-driven assertions. How does the team plan to answer them?
+        </p>
+
+        <h3 class="mt-4 text-sm font-semibold text-slate-900">CDP unavailability in policy-managed browsers</h3>
+        <p class="mt-1 font-medium text-slate-800">
+          How does the suite reach SUTs that only accept a policy-managed, CDP-disabled browser?
+        </p>
+        <p class="mt-2 text-slate-600">
+          Enterprise SUTs increasingly require the user's <em>actual</em> browser &mdash; a Group-Policy-locked Chrome, an MDM-managed Edge for Business, or a managed-enterprise browser like Island or Talon &mdash; with corporate extensions enrolled, SSO bound to the device, and remote debugging disabled at the policy level. Playwright drives Chromium over CDP; when CDP is blocked, Playwright cannot drive the browser at all, no matter what is on the page. The team needs an answer for how the suite reaches these SUTs when the only acceptable client is a hardened, managed browser that refuses to be automated from the inside.
         </p>
 
         <h3 class="mt-4 text-sm font-semibold text-slate-900">Prompt injection from the SUT</h3>
@@ -236,7 +244,7 @@ function demoTag(ref: { section: 'bd' | 'sr'; n: number }): { label: string; hre
         </p>
 
         <p class="mt-4 text-xs text-slate-500">
-          These cut across any test stack with an LLM in the loop &mdash; including an agentic-AIVA layer that drives Playwright. The arena does not currently demo either category; they live above the per-level pages, in the harness that calls Playwright rather than in the page Playwright is automating.
+          These concerns live above the arena's level pages, in the harness that runs Playwright. The LLM-driven ones apply to any test stack with an LLM in the loop, including an agentic-AIVA layer that drives Playwright. The CDP-availability one is specific to Playwright &mdash; AIVA's classic VNC + image-recognition path is unaffected because it controls the browser from the OS, not via CDP.
         </p>
       </section>
 
