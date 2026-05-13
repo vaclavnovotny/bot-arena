@@ -192,7 +192,7 @@ function demoTag(ref: { section: 'bd' | 'sr'; n: number }): { label: string; hre
       <section class="mt-14 max-w-3xl rounded-xl border border-slate-200 bg-white p-6 text-sm">
         <h2 class="text-base font-semibold text-slate-900">Open questions for Playwright-driven teams</h2>
         <p class="mt-2 text-slate-600">
-          The 13 rows above cover failure modes selector-based automation faces today. The moment a Playwright suite adds LLM assistance &mdash; test generation, self-healing locators, agent-driven assertions &mdash; two new risks appear in the harness itself, not in the page. How does the team plan to handle them?
+          The 13 rows above cover failure modes selector-based automation faces today. The moment a Playwright suite adds LLM assistance &mdash; test generation, self-healing locators, agent-driven assertions &mdash; three new concerns appear in the harness itself, not in the page. How does the team plan to handle them?
         </p>
 
         <h3 class="mt-4 text-sm font-semibold text-slate-900">Prompt injection from the SUT</h3>
@@ -213,6 +213,16 @@ function demoTag(ref: { section: 'bd' | 'sr'; n: number }): { label: string; hre
           <li>How does the suite cross-check the LLM verdict against a deterministic signal?</li>
           <li>How often does the team audit assertion accuracy against ground truth?</li>
           <li>What is the deterministic fallback when the LLM and the DOM disagree?</li>
+        </ul>
+
+        <h3 class="mt-4 text-sm font-semibold text-slate-900">Reproducibility, auditability, cost predictability</h3>
+        <p class="mt-1 text-slate-600">
+          Deterministic test pipelines have three properties for free: the same input gives the same output every run, every step explains itself in the diff, and the bill is bounded by CPU time. LLM-driven steps surrender all three at once &mdash; output drifts with model version and temperature, the &ldquo;why&rdquo; lives inside opaque weights, and every assertion is a paid API call dependent on a remote provider.
+        </p>
+        <ul class="mt-2 list-disc space-y-1 pl-5 text-slate-600">
+          <li>How do you plan to solve <strong>reproducibility</strong> &mdash; same screenshot + same parsing logic = same result every execution?</li>
+          <li>How do you plan to solve <strong>auditability</strong> &mdash; the decision path is inspectable and explainable after the fact?</li>
+          <li>How do you plan to solve <strong>cost predictability</strong> &mdash; near-zero marginal compute, CPU-only, no cloud inference dependency?</li>
         </ul>
 
         <p class="mt-4 text-xs text-slate-500">
