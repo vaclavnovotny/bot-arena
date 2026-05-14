@@ -5,7 +5,7 @@
 // part-studio page can be inspected.
 
 import { test, expect } from '@playwright/test';
-import { canvasCentre } from '../support';
+import { canvasCentre } from './helpers';
 
 // Target: Onshape Free public part-studio. Set ONSHAPE_TEST_EMAIL and
 // ONSHAPE_TEST_PASSWORD in .env (see .env.example).

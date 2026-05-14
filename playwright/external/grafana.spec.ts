@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { ocr } from '../support';
+import { ocr } from './helpers';
 
 // Target: Grafana Play public demo dashboard. Pinned at implementation time (2026-05-14).
 // Dashboard: "1 - Time series features detailed overview" (Demo: Visualizations folder)

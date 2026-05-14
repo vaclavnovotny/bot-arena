@@ -21,7 +21,7 @@ export default defineConfig({
     },
     {
       name: 'external',
-      testMatch: 'external/**',
+      testMatch: 'external/**/*.spec.ts',
       use: {
         browserName: 'chromium',
         // Each external spec navigates to its own SUT URL; no shared baseURL.
