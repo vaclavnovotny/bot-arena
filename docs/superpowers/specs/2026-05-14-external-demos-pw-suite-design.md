@@ -25,7 +25,7 @@ Each app gets two tests: a naïve locator-based attempt (the same shape as `play
 - **No deep per-app coverage.** Two tests per app, not three or more. We accepted the "hybrid: one naive + one best-effort per app" scope and will not expand beyond it in v1.
 - **No remote vision/LLM workarounds.** Adding a model call to the best-effort path turns the demonstration from "PW + clever script fails" into "PW + agentic harness sometimes succeeds, sometimes hallucinates" — a different question already covered by the `/comparison` open-question on hallucinations.
 - **No new tooling additions to the default `chromium` project.** The existing 13 arena tests must keep running identically.
-- **No additional families beyond `vision-only`.** All three pick canvas-rendering failures. We can widen later (e.g. `streamed-desktop` if we add a Kasm test) but not in v1.
+- **v1 ships only `vision-only` entries.** The three picks all target canvas-rendering failures. The data model reuses the `Family` type from `surfaces.ts`, so adding `streamed-desktop` (e.g. a Kasm Workspaces test) or any other family in a later iteration is a data-only change — no schema rewrite, no page-template rewrite. The door is left open.
 - **No bypass of any demo's auth, rate limits, or ToS.** This is documented in the README; tests use realistic user agents, conservative `workers: 1` parallelism, and a dedicated Onshape test account.
 
 ## 3. Page contract
