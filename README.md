@@ -50,7 +50,7 @@ A static dashboard at [`/report/`](https://bot-arena.jhero.app/report/) breaks d
 - **TypeScript** strict mode
 - **Cloudflare Pages** + one Pages Function (`src/pages/api/turnstile/verify.ts`) for Turnstile token verification
 - **Vitest + happy-dom** for unit tests (37 unit tests)
-- **Playwright Test** for the end-to-end "every test fails" suite (13 tests)
+- **Playwright Test** for the end-to-end "every test fails" suite (13 tests, default project) and an opt-in `external` project (6 tests against public SaaS demos)
 
 ## Routes
 
@@ -75,6 +75,17 @@ npm test            # vitest run (unit tests)
 npx playwright test                 # run the e2e suite against bot-arena.jhero.app
 npx playwright test --reporter=html # then `npx playwright show-report` for traces
 ```
+
+### Running external-demo tests
+
+A separate Playwright project at `playwright/external/` targets three public third-party demos (Grafana Play, Onshape Free, Odoo demo) and demonstrates that stock Playwright cannot drive their canvas-rendered surfaces even with the strongest in-process workaround. These tests are opt-in — `npx playwright test` (the default project) never runs them.
+
+```bash
+npm run test:external                  # runs only the 6 external-demo tests
+npx playwright test --project external # equivalent
+```
+
+We run these tests against third-party public demos in good faith. We do not bypass auth, defeat rate limits, or use these demos for load testing. The Onshape test requires a dedicated test account — see `.env.example`. If a demo's terms change, retire the corresponding test rather than route around the change.
 
 The Playwright suite is intentionally a "negative" test suite: every test fails by design when run against this site. A test passing means a detection or selector-resistance technique stopped working.
 
