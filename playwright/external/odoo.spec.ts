@@ -74,6 +74,8 @@ test.describe('Odoo demo — drag a Gantt task to reschedule', () => {
     const dayWidth = parseCssLength(raw);
     expect(dayWidth, 'demo bundle exposes a pixel day-width').not.toBeNull();
 
+    // Use unfiltered .o_gantt_pill (not wrapper-filtered by task name like naive test)
+    // because goal is to demo the pixel-drag failure mode, not drag a specific task.
     const task = page.locator('.o_gantt_pill').first();
     const b = await task.boundingBox();
     expect(b, 'task pill has a bounding box').not.toBeNull();
