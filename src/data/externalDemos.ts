@@ -100,7 +100,7 @@ await page.mouse.click(x, y);
 // centre on an edge or a different face; the assertion fails.
 await expect(page.locator('[data-selected-face]')).toHaveAttribute('data-selected-face', 'front');`,
       error:
-        '(test skipped: ONSHAPE_TEST_EMAIL not set). When run with creds: TimeoutError waiting for [data-selected-face="front"]',
+        '(test skipped: ONSHAPE_TEST_EMAIL not set). When run with creds: TimeoutError waiting for [data-selected-face="front"]. Note: the canvas selector canvas[data-cy="graphics-canvas"] is unverified — Onshape auth is required to confirm. The actual failure mode under real creds may differ slightly.',
       reasonItStillFails:
         "The viewport centroid is only the front face if the camera happens to face the model squarely. Onshape's default ISO view orients the model at an angle, so the centroid lands on an edge or a different face. The test has no way to determine which face was actually selected without reading the Properties panel — which itself depends on the part exposing named faces as DOM attributes, something the WebGL renderer does not provide.",
     },

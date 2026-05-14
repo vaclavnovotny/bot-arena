@@ -57,9 +57,12 @@ A static dashboard at [`/report/`](https://bot-arena.jhero.app/report/) breaks d
 ```
 /                                       Landing page
 /about                                  Plain-English explanation
+/comparison                             Playwright vs AIVA grouped table
+/external                               External-demo evidence page
 /report                                 Failure dashboard with TOC
 /bot-detection/level-{1..5}             Bot-detection level pages
 /selector-resistance/level-{1..8}       Selector-resistance level pages
+/other-usecases                         Production-app case studies
 /api/turnstile/verify                   SSR endpoint (Pages Function) for L5
 ```
 
