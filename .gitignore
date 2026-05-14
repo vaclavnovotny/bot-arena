@@ -12,8 +12,5 @@ playwright-report/
 playwright/.cache/
 .playwright-mcp/
 
-# Tesseract.js language data cached by external-demo tests
-*.traineddata
-
 # Local tooling
 .superpowers/

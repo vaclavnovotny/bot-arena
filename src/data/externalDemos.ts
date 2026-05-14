@@ -45,21 +45,22 @@ await expect(page.getByText(/^\\d{1,4}\\s?ms$/i)).toBeVisible({ timeout: 10_000 
       code: `const panel = page.locator(\`[data-testid="data-testid Panel header \${PANEL_NAME}"]\`).first();
 await expect(panel).toBeVisible({ timeout: 15_000 });
 
-const buf = await panel.screenshot();
-const text = await ocr(buf);
+const box = await panel.boundingBox();
+const x = box!.x + box!.width - 20;   // 20px in from the right edge
+const y = box!.y + box!.height / 2;
+await page.mouse.move(x, y);
 
-expect(text, \`OCR returned empty string\`).toBeTruthy();
-const m = text.match(/(\\d{1,4})/);
-if (m) {
-  expect(Number(m[1])).toBeLessThan(10_000);
-}`,
+const tooltip = page.getByRole('tooltip').first();
+await expect(tooltip).toBeVisible({ timeout: 5_000 });
+const text = await tooltip.textContent();
+expect(text!.length).toBeGreaterThan(0);`,
       error:
-        '(test passes vacuously — OCR returns digits but cannot bind them to a timestamp)',
+        'Error: expect(locator).toBeVisible() failed\n\nLocator: getByRole(\'tooltip\').first()\nExpected: visible\nTimeout: 5000ms\nError: element(s) not found',
       reasonItStillFails:
-        'OCR can return digits from the cropped panel screenshot, but those digits cannot be bound to a timestamp without parsing the x-axis — which is also rendered as canvas pixels. The "Lines" panel shows dimensionless TestData values in the range 0–100; any digits OCR extracts might come from axis tick labels, the legend, or chart values from an arbitrary time bucket. A passing test here represents no actual verification of the latest sample.',
+        "Grafana's tooltip is DOM-rendered by uPlot's tooltip plugin, but a synthetic mouse.move is not enough to trigger it — the tooltip dismisses on every mouse move event and only materialises during a genuine pointer interaction driven by the browser's input pipeline. Even if the tooltip did appear, its content would be bound to the cursor x-position, not \"the latest sample\": Playwright has no way to map a cursor x-coordinate to a specific timestamp without parsing the x-axis tick labels, which are also canvas-rendered pixels.",
     },
     whyItFails:
-      'The panel value is rendered into the panel <code>&lt;canvas&gt;</code> by uPlot. There is no DOM text node containing the number the human sees. Selector-based reads return zero matches. Grafana Play (v11) does not expose <code>data-panel-name</code> attributes; panel containers are <code>&lt;section&gt;</code> elements identified by <code>data-testid</code>. Pixel-OCR on the panel screenshot works partially, but the test still cannot verify which time bucket the recognised number belongs to without parsing the x-axis — also canvas-rendered. The test is fundamentally trying to derive structured data from rendered pixels, which is exactly what AIVA does at the OS level.',
+      'The panel value is rendered into the panel <code>&lt;canvas&gt;</code> by uPlot. There is no DOM text node containing the number the human sees. Selector-based reads return zero matches. Grafana Play (v11) does not expose <code>data-panel-name</code> attributes; panel containers are <code>&lt;section&gt;</code> elements identified by <code>data-testid</code>. A hover-tooltip approach also fails: synthetic mouse moves do not trigger the uPlot tooltip reliably in headless Playwright, and even when the tooltip renders its value is bound to the cursor x-position rather than a named time bucket — correlating it to a timestamp requires parsing the x-axis, which is also canvas-rendered. The test is fundamentally trying to derive structured data from rendered pixels, which is exactly what AIVA does at the OS level.',
     aivaContext:
       'AIVA reads the panel value the same way a human does — by looking at the rendered pixels through the desktop session, with no expectation of a DOM. The same approach reads the x-axis labels for timestamp binding, the legend colours for series identity, and the title bar for panel identity, all in one pass.',
   },

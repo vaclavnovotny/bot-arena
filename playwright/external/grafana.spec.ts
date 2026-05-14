@@ -1,5 +1,4 @@
 import { test, expect } from '@playwright/test';
-import { ocr } from './helpers';
 
 // Target: Grafana Play public demo dashboard. Pinned at implementation time (2026-05-14).
 // Dashboard: "1 - Time series features detailed overview" (Demo: Visualizations folder)
@@ -28,28 +27,32 @@ test.describe('Grafana Play — read a canvas-rendered panel value', () => {
     await expect(page.getByText(/^\d{1,4}\s?ms$/i)).toBeVisible({ timeout: 10_000 });
   });
 
-  test('best-effort: OCR the panel screenshot', { tag: '@external' }, async ({ page }) => {
+  test('best-effort: hover over the chart canvas and read the DOM tooltip', { tag: '@external' }, async ({ page }) => {
     await page.goto(DASHBOARD_URL);
-
-    // Grafana Play (v11) uses data-testid="data-testid Panel header {name}" on the
-    // <section> panel container. There is no data-panel-name attribute in this build.
     const panel = page.locator(`[data-testid="data-testid Panel header ${PANEL_NAME}"]`).first();
     await expect(panel).toBeVisible({ timeout: 15_000 });
 
-    const buf = await panel.screenshot();
-    const text = await ocr(buf);
+    // Hover near the right edge of the panel — the latest data point on a time
+    // series chart. Grafana's tooltip is DOM (rendered by uPlot's tooltip
+    // plugin), so a synthetic mouse.move SHOULD make it appear. In practice the
+    // tooltip dismisses on every mouse move and binds to whichever x-coordinate
+    // the cursor lands on — not "the latest sample".
+    const box = await panel.boundingBox();
+    expect(box, 'panel has a bounding box').not.toBeNull();
+    const x = box!.x + box!.width - 20;        // 20px in from the right edge
+    const y = box!.y + box!.height / 2;
+    await page.mouse.move(x, y);
 
-    // The "Lines" panel shows values in the range 0–100 (dimensionless TestData).
-    // OCR may or may not extract a clean number from the canvas-rendered chart.
-    // The assertion below only proves OCR ran and returned something — not that
-    // the value corresponds to the latest sample, because correlating a pixel
-    // to a timestamp requires parsing the x-axis (also canvas pixels).
-    expect(text, `OCR returned empty string`).toBeTruthy();
+    // The tooltip selector is uPlot-specific; in current Grafana it has
+    // role="tooltip" and lives in a portal at the document root.
+    const tooltip = page.getByRole('tooltip').first();
+    await expect(tooltip).toBeVisible({ timeout: 5_000 });
 
-    // If OCR did extract digits, they should be plausible chart values (< 10000).
-    const m = text.match(/(\d{1,4})/);
-    if (m) {
-      expect(Number(m[1])).toBeLessThan(10_000);
-    }
+    // Even if the tooltip appears, its value corresponds to the cursor x-position,
+    // not "the latest sample" — and PW cannot prove which time bucket the value
+    // represents without parsing the (canvas-rendered) x-axis label.
+    const text = await tooltip.textContent();
+    expect(text, 'tooltip has text').not.toBeNull();
+    expect(text!.length).toBeGreaterThan(0);
   });
 });

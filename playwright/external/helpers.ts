@@ -1,5 +1,3 @@
-import { createWorker, type Worker } from 'tesseract.js';
-
 interface BoundingBox {
   x: number;
   y: number;
@@ -27,19 +25,4 @@ export function parseCssLength(raw: string | null | undefined): number | null {
   const m = trimmed.match(/^([0-9]+(?:\.[0-9]+)?)px$/);
   if (!m) return null;
   return Number(m[1]);
-}
-
-let cachedWorker: Worker | null = null;
-
-/**
- * Run Tesseract.js OCR on a PNG/JPEG buffer and return the recognised text.
- * Loads the English language model lazily on first call and reuses the worker
- * across subsequent calls in the same test process.
- */
-export async function ocr(buffer: Buffer): Promise<string> {
-  if (!cachedWorker) {
-    cachedWorker = await createWorker('eng');
-  }
-  const result = await cachedWorker.recognize(buffer);
-  return result.data.text;
 }
