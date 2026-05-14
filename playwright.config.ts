@@ -6,7 +6,6 @@ export default defineConfig({
   workers: 1,
   reporter: 'list',
   use: {
-    baseURL: 'https://bot-arena.jhero.app',
     headless: true,
     trace: 'retain-on-failure',
     screenshot: 'only-on-failure',
@@ -14,7 +13,21 @@ export default defineConfig({
   projects: [
     {
       name: 'chromium',
-      use: { browserName: 'chromium' },
+      testIgnore: ['external/**'],
+      use: {
+        browserName: 'chromium',
+        baseURL: 'https://bot-arena.jhero.app',
+      },
+    },
+    {
+      name: 'external',
+      testMatch: 'external/**',
+      use: {
+        browserName: 'chromium',
+        // Each external spec navigates to its own SUT URL; no shared baseURL.
+        userAgent:
+          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/132.0.0.0 Safari/537.36',
+      },
     },
   ],
 });

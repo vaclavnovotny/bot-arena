@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { parseCssLength } from './helpers';
+import { parseCssLength } from '../support';
 
 // Target: Odoo Online public demo. demo.odoo.com provisions a fresh subdomain
 // per visit (e.g. demo2.odoo.com, demo3.odoo.com); we navigate to the canonical
