@@ -23,6 +23,7 @@
     "@playwright/test": "^1.60.0",
     "@types/node": "^25.7.0",
     "happy-dom": "^20.9.0",
+    "tesseract.js": "^5.1.1",
     "typescript": "^6.0.3",
     "vitest": "^4.1.6"
   },
