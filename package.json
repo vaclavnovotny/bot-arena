@@ -12,7 +12,8 @@
     "preview": "astro preview",
     "check": "astro check",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "test:external": "playwright test --project external"
   },
   "keywords": [],
   "author": "",
