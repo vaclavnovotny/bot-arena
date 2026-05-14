@@ -3,9 +3,25 @@ import '../styles/global.css';
 import { externalDemos } from '../data/externalDemos';
 
 const categoryPillClass: Record<string, string> = {
-  'Enterprise observability': 'bg-cyan-100 text-cyan-800',
-  'Engineering CAD': 'bg-violet-100 text-violet-800',
   'Open-source ERP': 'bg-amber-100 text-amber-900',
+};
+
+const layerVariant: Record<'reaches' | 'fails' | 'opaque', { pillBg: string; cardBorder: string; pillText: string }> = {
+  reaches: {
+    pillBg: 'bg-emerald-100 text-emerald-800',
+    cardBorder: 'border-emerald-200',
+    pillText: '✓ Reaches',
+  },
+  fails: {
+    pillBg: 'bg-rose-100 text-rose-800 ring-1 ring-rose-300',
+    cardBorder: 'border-rose-300',
+    pillText: '✗ Stops here',
+  },
+  opaque: {
+    pillBg: 'bg-slate-200 text-slate-700',
+    cardBorder: 'border-slate-300',
+    pillText: '· No DOM',
+  },
 };
 ---
 <html lang="en">
@@ -16,7 +32,7 @@ const categoryPillClass: Record<string, string> = {
     <title>External demos — Bot Arena</title>
     <meta
       name="description"
-      content="Three public enterprise SaaS demos (Grafana Play, Onshape Free, Odoo) where stock Playwright cannot drive the canvas-rendered surfaces even with the strongest in-process workaround."
+      content="Why selector-based automation hits a wall on canvas-rendered enterprise apps, with Odoo Spreadsheet as the exemplar — a real Playwright run + a real AIVA run, side by side."
     />
   </head>
   <body class="min-h-screen bg-slate-50 text-slate-900">
@@ -37,78 +53,187 @@ const categoryPillClass: Record<string, string> = {
       </div>
     </header>
 
-    <main class="mx-auto max-w-4xl px-6 py-12">
+    <main class="mx-auto max-w-3xl px-6 py-12">
       <p class="text-xs font-semibold uppercase tracking-widest text-slate-500">Out of arena</p>
       <h1 class="mt-2 text-3xl font-bold tracking-tight sm:text-4xl">
-        External demos — where Playwright runs out of road in public SaaS
+        Where Playwright runs out of road in public SaaS
       </h1>
       <p class="mt-3 max-w-3xl text-slate-600">
-        Three real enterprise demos, not arena pages. For each one: a naïve Playwright test, the strongest workaround a
-        Playwright test can express, and the structural reason both fail. Best-effort tests use only in-process
-        techniques — <code class="rounded bg-slate-100 px-1 py-0.5 text-[11px]">page.evaluate</code>, mouse APIs, DOM
-        locators — so the demonstration shows the tool's limit, not a missed clever trick.
+        Modern web spreadsheets and enterprise data grids render to <code class="rounded bg-slate-100 px-1 py-0.5 text-[11px]">&lt;canvas&gt;</code>
+        for performance, putting the working surface beyond the reach of selector-based automation. Below: the canvas
+        pattern at scale, why ERP + spreadsheets is the worst-affected combination, and a live Playwright-vs-AIVA
+        demo against <strong>Odoo Spreadsheet</strong> as the exemplar.
       </p>
 
-      <nav class="mt-8 flex flex-wrap gap-3 text-sm">
-        {externalDemos.map((d) => (
-          <a
-            href={`#${d.id}`}
-            class="rounded-full border border-slate-300 px-3 py-1 text-slate-700 hover:bg-slate-100"
-          >
-            {d.title.split('—')[0].trim()}
-          </a>
-        ))}
-      </nav>
+      <div class="mt-6 grid gap-3 sm:grid-cols-3">
+        <div class="rounded-lg border border-slate-200 bg-white p-4">
+          <p class="text-xs font-semibold uppercase tracking-wide text-slate-400">The pattern, at scale</p>
+          <p class="mt-1 text-2xl font-bold tracking-tight text-slate-900">900M+</p>
+          <p class="mt-0.5 text-[11px] font-semibold uppercase tracking-wide text-slate-500">monthly users on a canvas-rendered spreadsheet</p>
+          <p class="mt-2 text-xs leading-relaxed text-slate-600">
+            <a href="https://electroiq.com/stats/google-workspace-statistics/" target="_blank" rel="noopener" class="underline decoration-slate-300 underline-offset-2 hover:decoration-slate-700">Google Sheets alone</a>;
+            <strong>Microsoft Excel</strong> adds another 750M+
+            (<a href="https://earthweb.com/excel-users/" target="_blank" rel="noopener" class="underline decoration-slate-300 underline-offset-2 hover:decoration-slate-700">Microsoft, 2017 baseline</a>),
+            <strong>Smartsheet</strong> runs at <strong>85% of Fortune 500</strong>.
+            <a href="https://workspaceupdates.googleblog.com/2021/05/Google-Docs-Canvas-Based-Rendering-Update.html" target="_blank" rel="noopener" class="underline decoration-slate-300 underline-offset-2 hover:decoration-slate-700">Google Docs migrated to canvas in May 2021</a>
+            and broke a swathe of Chrome extensions in the process — selector tools only see the chrome around the grid.
+          </p>
+        </div>
+        <div class="rounded-lg border border-slate-200 bg-white p-4">
+          <p class="text-xs font-semibold uppercase tracking-wide text-slate-400">The category</p>
+          <p class="mt-1 text-2xl font-bold tracking-tight text-slate-900">71%</p>
+          <p class="mt-0.5 text-[11px] font-semibold uppercase tracking-wide text-slate-500">of FP&amp;A teams own EPM tools — and still run on spreadsheets</p>
+          <p class="mt-2 text-xs leading-relaxed text-slate-600">
+            <a href="https://www.financialprofessionals.org/training-resources/resources/articles/Details/why-aren-t-fp-a-teams-using-the-epm-tools-they-bought" target="_blank" rel="noopener" class="underline decoration-slate-300 underline-offset-2 hover:decoration-slate-700">2025 AFP FP&amp;A Benchmarking Survey</a>.
+            A separate 700-leader survey: <strong>40% of businesses</strong> still manage half their financial data
+            manually; <strong>26%</strong> manage the majority manually
+            (<a href="https://www.fintechstrategy.com/blog/2025/10/20/finance-teams-stuck-in-spreadsheets-as-digital-transformation-stalls/" target="_blank" rel="noopener" class="underline decoration-slate-300 underline-offset-2 hover:decoration-slate-700">FinTech Strategy, 2025</a>).
+            Spreadsheets stay the de facto ERP surface — and vendors ship canvas spreadsheets to plug the gap.
+          </p>
+        </div>
+        <div class="rounded-lg border border-emerald-200 bg-emerald-50/40 p-4">
+          <p class="text-xs font-semibold uppercase tracking-wide text-emerald-700">Our exemplar</p>
+          <p class="mt-1 text-2xl font-bold tracking-tight text-slate-900">13M+</p>
+          <p class="mt-0.5 text-[11px] font-semibold uppercase tracking-wide text-slate-500">Odoo users — the canvas-ERP pattern with a public trial</p>
+          <p class="mt-2 text-xs leading-relaxed text-slate-600">
+            <strong>40% YoY growth</strong>, 7,000 new clients/month, <strong>€5 billion valuation</strong>
+            (<a href="https://www.odoo.com/blog/odoo-news-5/odoo-sa-announces-a-500-million-transaction-increasing-the-belgian-unicorns-valuation-to-5-billion-1508" target="_blank" rel="noopener" class="underline decoration-slate-300 underline-offset-2 hover:decoration-slate-700">Odoo SA, Nov 2024</a>).
+            ~<strong>15% of the SMB ERP market</strong>, projected 25% by 2027. Their Spreadsheet ships in every
+            Enterprise edition — and the free trial lets us demonstrate the failure publicly, against a real grid,
+            without violating anyone's terms.
+          </p>
+        </div>
+      </div>
 
       {externalDemos.map((d) => (
-        <section id={d.id} class="mt-12 scroll-mt-20 rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-          <div class="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+        <section id={d.id} class="mt-10 rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+          <p class="text-[11px] font-semibold uppercase tracking-widest text-emerald-700">Exemplar · live demo</p>
+          <div class="mt-1 flex flex-wrap items-baseline gap-x-3 gap-y-1">
             <h2 class="text-xl font-semibold text-slate-900">{d.title}</h2>
             <span class={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${categoryPillClass[d.category] ?? 'bg-slate-100 text-slate-700'}`}>
               {d.category}
             </span>
           </div>
-
-          <p class="mt-1 text-sm text-slate-500">
+          <p class="mt-1 text-xs text-slate-500">
             <a href={d.demoUrl} target="_blank" rel="noopener" class="underline decoration-slate-300 underline-offset-2 hover:decoration-slate-700">
               {d.demoUrl}
             </a>
           </p>
 
-          <p class="mt-4 text-sm text-slate-700"><span class="font-semibold">Use case:</span> {d.useCase}</p>
+          <h3 class="mt-6 text-xs font-semibold uppercase tracking-wide text-slate-500">Goal</h3>
+          <p class="mt-1 text-sm text-slate-800">{d.goal}</p>
 
-          <h3 class="mt-6 text-sm font-semibold uppercase tracking-wide text-slate-500">Naïve Playwright test</h3>
-          <pre class="mt-2 overflow-x-auto rounded-md bg-slate-900 p-3 text-[12px] leading-relaxed text-slate-100"><code>{d.naive.code}</code></pre>
-          <p class="mt-2 text-xs text-rose-700"><span class="font-semibold">Error:</span> {d.naive.error}</p>
+          <h3 class="mt-5 text-xs font-semibold uppercase tracking-wide text-slate-500">Steps</h3>
+          <ol class="mt-1 list-decimal space-y-1 pl-5 text-sm text-slate-800">
+            {d.steps.map((s) => <li>{s}</li>)}
+          </ol>
 
-          <h3 class="mt-6 text-sm font-semibold uppercase tracking-wide text-slate-500">Best-effort Playwright test (in-process workaround)</h3>
-          <pre class="mt-2 overflow-x-auto rounded-md bg-slate-900 p-3 text-[12px] leading-relaxed text-slate-100"><code>{d.bestEffort.code}</code></pre>
-          <p class="mt-2 text-xs text-rose-700"><span class="font-semibold">Error:</span> {d.bestEffort.error}</p>
-          <p class="mt-2 text-xs text-slate-600"><span class="font-semibold">Why this workaround still fails:</span> {d.bestEffort.reasonItStillFails}</p>
+          <h3 class="mt-5 text-xs font-semibold uppercase tracking-wide text-slate-500">Problem</h3>
+          <p class="mt-1 text-sm leading-relaxed text-slate-800" set:html={d.problem} />
 
-          <h3 class="mt-6 text-sm font-semibold uppercase tracking-wide text-slate-500">Why it fails</h3>
-          <p class="mt-2 text-sm leading-relaxed text-slate-700" set:html={d.whyItFails} />
+          <h3 class="mt-5 text-xs font-semibold uppercase tracking-wide text-slate-500">
+            Where Playwright bounces off
+          </h3>
+          <ol class="mt-2 space-y-2">
+            {d.layers.map((layer) => {
+              const v = layerVariant[layer.status];
+              return (
+                <li class={`rounded-md border ${v.cardBorder} bg-white p-3`}>
+                  <div class="flex flex-wrap items-center gap-2">
+                    <span class={`inline-flex flex-none items-center rounded-full px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${v.pillBg}`}>
+                      {v.pillText}
+                    </span>
+                    <span class="text-sm font-medium text-slate-900">{layer.name}</span>
+                  </div>
+                  <p class="mt-1.5 text-xs leading-relaxed text-slate-600" set:html={layer.detail} />
+                </li>
+              );
+            })}
+          </ol>
+          <p class="mt-2 text-xs italic text-slate-500">{d.aivaFootnote}</p>
 
-          <h3 class="mt-6 text-sm font-semibold uppercase tracking-wide text-slate-500">AIVA context</h3>
-          <p class="mt-2 text-sm leading-relaxed text-slate-700" set:html={d.aivaContext} />
+          <div class="mt-6 flex flex-wrap items-center gap-2">
+            <span class="inline-flex items-center rounded-full bg-rose-100 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-rose-800 ring-1 ring-rose-300">
+              ✗ Fails
+            </span>
+            <h3 class="text-xs font-semibold uppercase tracking-wide text-slate-500">
+              Playwright recording <span class="ml-1 font-normal normal-case tracking-normal text-slate-400">({d.videoDuration})</span>
+            </h3>
+          </div>
+          <video
+            class="mt-2 w-full rounded-md border border-slate-200 bg-black"
+            src={d.videoSrc}
+            poster={d.posterSrc}
+            controls
+            preload="metadata"
+            playsinline
+          >
+            <a href={d.videoSrc} class="text-sm text-slate-200 underline">Download the recording ({d.videoDuration})</a>
+          </video>
+
+          <div class="mt-6 flex flex-wrap items-center gap-2">
+            <span class="inline-flex items-center rounded-full bg-emerald-100 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-emerald-800 ring-1 ring-emerald-300">
+              ✓ Passes
+            </span>
+            <h3 class="text-xs font-semibold uppercase tracking-wide text-slate-500">
+              AIVA recording <span class="ml-1 font-normal normal-case tracking-normal text-slate-400">(same task — 2× speed)</span>
+            </h3>
+          </div>
+          <video
+            class="mt-2 w-full rounded-md border border-emerald-200 bg-black"
+            src={d.aivaVideoSrc}
+            controls
+            preload="metadata"
+            playsinline
+            data-default-rate="2"
+          >
+            <a href={d.aivaVideoSrc} class="text-sm text-slate-200 underline">Download the AIVA recording</a>
+          </video>
+          <p class="mt-2 text-xs text-slate-600">{d.aivaVideoCaption}</p>
+
+          <details class="mt-3 rounded-md border border-emerald-200 bg-emerald-50/40">
+            <summary class="cursor-pointer select-none px-3 py-2 text-xs font-medium text-emerald-900 hover:bg-emerald-100/60">
+              Show AIVA's step-by-step run log
+            </summary>
+            <div class="px-3 pb-3">
+              <img
+                src={d.aivaStepsImageSrc}
+                alt="AIVA test-runs viewer screenshot showing each step the agent executed against Odoo Spreadsheet (login credentials redacted)."
+                class="w-full rounded-md border border-emerald-200"
+              />
+              <p class="mt-2 text-xs text-slate-600">{d.aivaStepsCaption}</p>
+            </div>
+          </details>
+
+          <details class="group mt-6 rounded-md border border-slate-200 bg-slate-50">
+            <summary class="flex cursor-pointer select-none items-center justify-between px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100">
+              <span>Show the Playwright test</span>
+              <span class="text-xs text-slate-500 group-open:hidden">expand</span>
+              <span class="hidden text-xs text-slate-500 group-open:inline">collapse</span>
+            </summary>
+            <pre class="overflow-x-auto rounded-b-md bg-slate-900 p-4 text-[12px] leading-relaxed text-slate-100"><code>{d.testCode}</code></pre>
+            <p class="border-t border-slate-200 px-4 py-2 font-mono text-[11px] text-rose-700">{d.failureLine}</p>
+          </details>
         </section>
       ))}
-
-      <section class="mt-14 rounded-xl border border-slate-200 bg-white p-6 text-sm text-slate-600">
-        <h2 class="text-base font-semibold text-slate-900">How to read this</h2>
-        <p class="mt-2">
-          All three apps are out-of-arena public demos with their own terms of service. We run tests against them
-          sparingly, never bypass auth or rate limits, and use a dedicated test account where signup is required.
-        </p>
-        <p class="mt-3">
-          For the in-arena equivalents, see the
-          <a href="/report" class="text-slate-900 underline decoration-slate-400 underline-offset-2 hover:decoration-slate-900">full failure report</a>.
-        </p>
-      </section>
     </main>
 
     <footer class="border-t border-slate-200 py-6 text-center text-xs text-slate-500">
       Demo target only. No analytics, no tracking.
     </footer>
+
+    <script>
+      // Honour each video's data-default-rate as its starting playback speed.
+      // Re-apply on metadata + play because some browsers reset rate when the
+      // resource finishes loading.
+      for (const v of document.querySelectorAll<HTMLVideoElement>('video[data-default-rate]')) {
+        const rate = Number(v.dataset.defaultRate);
+        if (!Number.isFinite(rate) || rate <= 0) continue;
+        const apply = () => { v.playbackRate = rate; };
+        v.addEventListener('loadedmetadata', apply);
+        v.addEventListener('play', apply);
+        apply();
+      }
+    </script>
   </body>
 </html>
