@@ -1,0 +1,114 @@
+---
+import '../styles/global.css';
+import { externalDemos } from '../data/externalDemos';
+
+const categoryPillClass: Record<string, string> = {
+  'Enterprise observability': 'bg-cyan-100 text-cyan-800',
+  'Engineering CAD': 'bg-violet-100 text-violet-800',
+  'Open-source ERP': 'bg-amber-100 text-amber-900',
+};
+---
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <title>External demos — Bot Arena</title>
+    <meta
+      name="description"
+      content="Three public enterprise SaaS demos (Grafana Play, Onshape Free, Odoo) where stock Playwright cannot drive the canvas-rendered surfaces even with the strongest in-process workaround."
+    />
+  </head>
+  <body class="min-h-screen bg-slate-50 text-slate-900">
+    <header class="border-b border-slate-200 bg-white">
+      <div class="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
+        <a href="/" class="inline-flex items-center gap-2 text-lg font-semibold tracking-tight">
+          <img src="/favicon.svg" alt="" class="h-6 w-6" />
+          <span>Bot Arena</span>
+        </a>
+        <nav class="flex gap-4 text-sm text-slate-600">
+          <a href="/comparison" class="hover:text-slate-900">Comparison</a>
+          <a href="/report" class="hover:text-slate-900">Failure report</a>
+          <a href="/other-usecases" class="hover:text-slate-900">Other use-cases</a>
+          <a href="/external" class="text-slate-900 font-medium">External demos</a>
+          <a href="/about" class="hover:text-slate-900">About</a>
+          <a href="https://github.com/vaclavnovotny/bot-arena" class="hover:text-slate-900">GitHub</a>
+        </nav>
+      </div>
+    </header>
+
+    <main class="mx-auto max-w-4xl px-6 py-12">
+      <p class="text-xs font-semibold uppercase tracking-widest text-slate-500">Out of arena</p>
+      <h1 class="mt-2 text-3xl font-bold tracking-tight sm:text-4xl">
+        External demos — where Playwright runs out of road in public SaaS
+      </h1>
+      <p class="mt-3 max-w-3xl text-slate-600">
+        Three real enterprise demos, not arena pages. For each one: a naïve Playwright test, the strongest workaround a
+        Playwright test can express, and the structural reason both fail. Best-effort tests use only in-process
+        techniques — <code class="rounded bg-slate-100 px-1 py-0.5 text-[11px]">page.evaluate</code>, mouse APIs, DOM
+        locators — so the demonstration shows the tool's limit, not a missed clever trick.
+      </p>
+
+      <nav class="mt-8 flex flex-wrap gap-3 text-sm">
+        {externalDemos.map((d) => (
+          <a
+            href={`#${d.id}`}
+            class="rounded-full border border-slate-300 px-3 py-1 text-slate-700 hover:bg-slate-100"
+          >
+            {d.title.split('—')[0].trim()}
+          </a>
+        ))}
+      </nav>
+
+      {externalDemos.map((d) => (
+        <section id={d.id} class="mt-12 scroll-mt-20 rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+          <div class="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+            <h2 class="text-xl font-semibold text-slate-900">{d.title}</h2>
+            <span class={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${categoryPillClass[d.category] ?? 'bg-slate-100 text-slate-700'}`}>
+              {d.category}
+            </span>
+          </div>
+
+          <p class="mt-1 text-sm text-slate-500">
+            <a href={d.demoUrl} target="_blank" rel="noopener" class="underline decoration-slate-300 underline-offset-2 hover:decoration-slate-700">
+              {d.demoUrl}
+            </a>
+          </p>
+
+          <p class="mt-4 text-sm text-slate-700"><span class="font-semibold">Use case:</span> {d.useCase}</p>
+
+          <h3 class="mt-6 text-sm font-semibold uppercase tracking-wide text-slate-500">Naïve Playwright test</h3>
+          <pre class="mt-2 overflow-x-auto rounded-md bg-slate-900 p-3 text-[12px] leading-relaxed text-slate-100"><code>{d.naive.code}</code></pre>
+          <p class="mt-2 text-xs text-rose-700"><span class="font-semibold">Error:</span> {d.naive.error}</p>
+
+          <h3 class="mt-6 text-sm font-semibold uppercase tracking-wide text-slate-500">Best-effort Playwright test (in-process workaround)</h3>
+          <pre class="mt-2 overflow-x-auto rounded-md bg-slate-900 p-3 text-[12px] leading-relaxed text-slate-100"><code>{d.bestEffort.code}</code></pre>
+          <p class="mt-2 text-xs text-rose-700"><span class="font-semibold">Error:</span> {d.bestEffort.error}</p>
+          <p class="mt-2 text-xs text-slate-600"><span class="font-semibold">Why this workaround still fails:</span> {d.bestEffort.reasonItStillFails}</p>
+
+          <h3 class="mt-6 text-sm font-semibold uppercase tracking-wide text-slate-500">Why it fails</h3>
+          <p class="mt-2 text-sm leading-relaxed text-slate-700" set:html={d.whyItFails} />
+
+          <h3 class="mt-6 text-sm font-semibold uppercase tracking-wide text-slate-500">AIVA context</h3>
+          <p class="mt-2 text-sm leading-relaxed text-slate-700" set:html={d.aivaContext} />
+        </section>
+      ))}
+
+      <section class="mt-14 rounded-xl border border-slate-200 bg-white p-6 text-sm text-slate-600">
+        <h2 class="text-base font-semibold text-slate-900">How to read this</h2>
+        <p class="mt-2">
+          All three apps are out-of-arena public demos with their own terms of service. We run tests against them
+          sparingly, never bypass auth or rate limits, and use a dedicated test account where signup is required.
+        </p>
+        <p class="mt-3">
+          For the in-arena equivalents, see the
+          <a href="/report" class="text-slate-900 underline decoration-slate-400 underline-offset-2 hover:decoration-slate-900">full failure report</a>.
+        </p>
+      </section>
+    </main>
+
+    <footer class="border-t border-slate-200 py-6 text-center text-xs text-slate-500">
+      Demo target only. No analytics, no tracking.
+    </footer>
+  </body>
+</html>
