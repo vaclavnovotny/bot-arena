@@ -202,6 +202,11 @@ async function selectCellByReference(page: Page, ref: string) {
         detail: 'Switching to channel <code>chrome</code> (real Chrome + Win10 UA) or a persistent <code>user-data-dir</code> gets past the fingerprint check — Google then escalates to <strong>"Verify it\'s you · Confirm you\'re not a robot"</strong>. Clicking the checkbox opens the canvas-rendered image grid ("Select all squares with bicycles"). The grid is a <code>&lt;canvas&gt;</code> inside a Google-owned iframe; <code>getByText(\'bicycle\')</code> resolves to zero elements. Variants B, E and F stop here.',
       },
       {
+        status: 'fails',
+        name: 'accounts.google.com — even with CDP-attach + warmup + full stealth',
+        detail: 'The strongest pure-Playwright move: launch real Chrome externally (no <code>--enable-automation</code> flag), attach via <code>chromium.connectOverCDP()</code>, run a 30-second behavioural warmup (google.com search → YouTube → accounts.google.com) through a *persistent* user-data-dir, then submit the email with Bezier mouse trajectories and per-character variable typing cadence. Stealth init script masks <code>navigator.webdriver</code>, plugins, languages, <code>window.chrome</code>, WebGL vendor/renderer, <code>hardwareConcurrency</code>, <code>deviceMemory</code>, the Permissions API and the Battery API. <strong>reCAPTCHA still fires.</strong> Variants G (CDP attach) and H (CDP + warmup + comprehensive stealth) both stop here.',
+      },
+      {
         status: 'opaque',
         name: 'Behind the wall — SAP Business One web client, app modules, ERP data',
         detail: 'Never reached. Every Playwright variant stops on Google\'s side; the actual SAP B1 surface (the thing the test was supposed to drive) is unobservable from selector-based automation.',
@@ -279,11 +284,15 @@ test('B. real-chrome — channel: chrome + Win10 UA', async () => {
       },
       {
         src: '/external/business-one-google-B-real-chrome-99-blocked.png',
-        caption: 'Variants B / E — switching to channel \'chrome\' clears the fingerprint check; Google escalates to a reCAPTCHA "Verify it\'s you" wall.',
+        caption: 'Variants B / E / G — switching to real Chrome (channel \'chrome\') or CDP-attaching to an externally-launched Chrome clears the fingerprint check; Google escalates to a reCAPTCHA "Verify it\'s you" wall.',
       },
       {
         src: '/external/business-one-google-recaptcha.png',
-        caption: 'Variant F clicks the "I\'m not a robot" checkbox; Google answers with the canvas-rendered image grid ("Select all squares with bicycles") — unsolvable from the DOM.',
+        caption: 'Variant F clicks the "I\'m not a robot" checkbox; Google answers with the canvas-rendered image grid ("Select all squares with fire hydrants / bicycles") — unsolvable from the DOM.',
+      },
+      {
+        src: '/external/business-one-google-H-deep-stealth-blocked.png',
+        caption: 'Variant H — strongest pure-Playwright cloak: CDP-attached Chrome + persistent profile + 30s behavioural warmup (Google search → YouTube → accounts.google.com) + Bezier mouse + variable typing + comprehensive stealth (WebGL/Permissions/Battery/Connection/HardwareConcurrency overrides). Still hits the same reCAPTCHA wall.',
       },
     ],
     aivaPendingNote:
