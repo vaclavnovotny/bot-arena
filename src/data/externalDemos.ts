@@ -368,7 +368,8 @@ test('B. real-chrome — channel: chrome + Win10 UA', async () => {
         caption: 'Variant H — strongest pure-Playwright cloak: CDP-attached Chrome + persistent profile + 30s behavioural warmup (Google search → YouTube → accounts.google.com) + Bezier mouse + variable typing + comprehensive stealth (WebGL/Permissions/Battery/Connection/HardwareConcurrency overrides). Still hits the same reCAPTCHA wall.',
       },
     ],
-    aivaPendingNote:
-      'AIVA recording for this demo is being captured separately on the agentic-aiva platform. The Playwright artifacts above are the proof side: eight escalating variants across both Google walls, all blocked before SAP Business One Cloud is ever reached.',
+    aivaVideoSrc: '/external/business-one-google-aiva.mp4',
+    aivaVideoCaption:
+      'AIVA driving the exact same flow end-to-end on a real desktop browser — clicking Login on business-one.cloud, choosing Google on the B2C popup, typing the email, then reading the reCAPTCHA image grid as rendered pixels and clicking the matching tiles. The eight pure-Playwright variants above all fail on this last step; AIVA does not run into either Google wall because it does not look like an automated browser to Google\'s engine in the first place.',
   },
 ];

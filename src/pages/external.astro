@@ -311,19 +311,21 @@ const defaultTabId = 'odoo-spreadsheet';
                   </video>
                   <p class="mt-2 text-xs text-slate-600">{d.aivaVideoCaption}</p>
 
-                  <details class="mt-3 rounded-md border border-emerald-200 bg-emerald-50/40">
-                    <summary class="cursor-pointer select-none px-3 py-2 text-xs font-medium text-emerald-900 hover:bg-emerald-100/60">
-                      Show AIVA's step-by-step run log
-                    </summary>
-                    <div class="px-3 pb-3">
-                      <img
-                        src={d.aivaStepsImageSrc}
-                        alt={`AIVA test-runs viewer screenshot showing each step the agent executed against ${d.title} (login credentials redacted).`}
-                        class="w-full rounded-md border border-emerald-200"
-                      />
-                      <p class="mt-2 text-xs text-slate-600">{d.aivaStepsCaption}</p>
-                    </div>
-                  </details>
+                  {d.aivaStepsImageSrc && (
+                    <details class="mt-3 rounded-md border border-emerald-200 bg-emerald-50/40">
+                      <summary class="cursor-pointer select-none px-3 py-2 text-xs font-medium text-emerald-900 hover:bg-emerald-100/60">
+                        Show AIVA's step-by-step run log
+                      </summary>
+                      <div class="px-3 pb-3">
+                        <img
+                          src={d.aivaStepsImageSrc}
+                          alt={`AIVA test-runs viewer screenshot showing each step the agent executed against ${d.title} (login credentials redacted).`}
+                          class="w-full rounded-md border border-emerald-200"
+                        />
+                        <p class="mt-2 text-xs text-slate-600">{d.aivaStepsCaption}</p>
+                      </div>
+                    </details>
+                  )}
                 </>
               ) : (
                 <div class="mt-6 rounded-md border border-dashed border-emerald-300 bg-emerald-50/40 p-4">

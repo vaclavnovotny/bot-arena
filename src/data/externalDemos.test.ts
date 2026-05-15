@@ -34,14 +34,17 @@ describe('externalDemos data module', () => {
       expect(d.videoDuration.length).toBeGreaterThan(0);
       // AIVA evidence is optional — entries shipped Playwright-first must
       // instead carry an aivaPendingNote so the page has *something* to
-      // render in the AIVA slot.
+      // render in the AIVA slot. The step-by-step screenshot is its own
+      // independently-optional pair (some demos have a video but no log).
       if (d.aivaVideoSrc) {
         expect(d.aivaVideoSrc).toMatch(/\.(mp4|webm)$/);
         expect(d.aivaVideoCaption?.length ?? 0).toBeGreaterThan(0);
-        expect(d.aivaStepsImageSrc).toMatch(/\.(png|jpg|jpeg|webp)$/);
-        expect(d.aivaStepsCaption?.length ?? 0).toBeGreaterThan(0);
       } else {
         expect(d.aivaPendingNote?.length ?? 0).toBeGreaterThan(0);
+      }
+      if (d.aivaStepsImageSrc) {
+        expect(d.aivaStepsImageSrc).toMatch(/\.(png|jpg|jpeg|webp)$/);
+        expect(d.aivaStepsCaption?.length ?? 0).toBeGreaterThan(0);
       }
       if (d.stills) {
         for (const s of d.stills) {
