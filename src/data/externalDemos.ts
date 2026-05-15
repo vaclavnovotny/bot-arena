@@ -55,6 +55,13 @@ export interface ExternalDemo {
     wall: 'fingerprint' | 'recaptcha-anchor' | 'recaptcha-image';
     /** One-sentence outcome (what URL / what message Google returned). */
     outcome: string;
+    /**
+     * GitHub permalink to the variant's source. Use a line-anchored URL on
+     * `main` so the link both names the file and jumps to the test body.
+     * Line numbers drift with refactors — update this field alongside the
+     * test itself.
+     */
+    sourceUrl: string;
   }>;
   /**
    * AIVA-side proof. Optional because some demos ship as Playwright-only
@@ -236,6 +243,7 @@ async function selectCellByReference(page: Page, ref: string) {
         change: 'Default chromium, default UA, no flags',
         wall: 'fingerprint',
         outcome: 'Lands on <code>/signin/rejected?idnf=…</code> immediately after Next. "This browser or app may not be secure."',
+        sourceUrl: 'https://github.com/vaclavnovotny/bot-arena/blob/main/playwright/external/business-one-google.spec.ts#L179-L183',
       },
       {
         letter: 'B',
@@ -243,6 +251,7 @@ async function selectCellByReference(page: Page, ref: string) {
         change: 'A + <code>channel: \'chrome\'</code> + Win10 Chrome UA + <code>--disable-blink-features=AutomationControlled</code>',
         wall: 'recaptcha-anchor',
         outcome: 'Fingerprint check passes. Lands on "Verify it\'s you" with the reCAPTCHA "I\'m not a robot" checkbox.',
+        sourceUrl: 'https://github.com/vaclavnovotny/bot-arena/blob/main/playwright/external/business-one-google.spec.ts#L191-L211',
       },
       {
         letter: 'C',
@@ -250,6 +259,7 @@ async function selectCellByReference(page: Page, ref: string) {
         change: 'A + <code>addInitScript</code>: delete <code>navigator.webdriver</code>, fake <code>plugins</code> / <code>mimeTypes</code>, restore <code>window.chrome.runtime</code>, override <code>navigator.languages</code> / Permissions API',
         wall: 'fingerprint',
         outcome: 'Same as A — the stealth surface is not enough on its own without a real Chrome binary underneath.',
+        sourceUrl: 'https://github.com/vaclavnovotny/bot-arena/blob/main/playwright/external/business-one-google.spec.ts#L220-L233',
       },
       {
         letter: 'D',
@@ -257,6 +267,7 @@ async function selectCellByReference(page: Page, ref: string) {
         change: 'C + per-character typing delay 60–180 ms, mouse drift to element centroid before each click, occasional thinking pauses',
         wall: 'fingerprint',
         outcome: 'Identical to A / C. Google flags before any human behavioural signal can register.',
+        sourceUrl: 'https://github.com/vaclavnovotny/bot-arena/blob/main/playwright/external/business-one-google.spec.ts#L241-L330',
       },
       {
         letter: 'E',
@@ -264,6 +275,7 @@ async function selectCellByReference(page: Page, ref: string) {
         change: 'B + <code>chromium.launchPersistentContext({ userDataDir })</code> so cookies and history accumulate between runs',
         wall: 'recaptcha-anchor',
         outcome: 'Same wall as B. An empty-then-warmed profile doesn\'t accumulate enough trust in one session.',
+        sourceUrl: 'https://github.com/vaclavnovotny/bot-arena/blob/main/playwright/external/business-one-google.spec.ts#L338-L356',
       },
       {
         letter: 'F',
@@ -271,6 +283,7 @@ async function selectCellByReference(page: Page, ref: string) {
         change: 'E + <code>frameLocator(\'iframe[src*="/recaptcha/"]\').click("I\'m not a robot")</code>',
         wall: 'recaptcha-image',
         outcome: 'Image grid opens — "Select all squares with fire hydrants". Tiles are <code>&lt;canvas&gt;</code> inside a Google iframe; cannot be classified from the DOM.',
+        sourceUrl: 'https://github.com/vaclavnovotny/bot-arena/blob/main/playwright/external/business-one-google.spec.ts#L366-L451',
       },
       {
         letter: 'G',
@@ -278,6 +291,7 @@ async function selectCellByReference(page: Page, ref: string) {
         change: '<code>chromium.connectOverCDP()</code> to a Chrome launched manually with <code>--remote-debugging-port</code> — not via Playwright, so the WebDriver-launch signature (<code>--enable-automation</code>, <code>DevToolsActivePort</code> file) never gets set',
         wall: 'recaptcha-anchor',
         outcome: 'Past Stage 1 — but Stage 2 still fires. The launch-time signature was the last residual sub-fingerprint that B / E couldn\'t hide.',
+        sourceUrl: 'https://github.com/vaclavnovotny/bot-arena/blob/main/scripts/external/business-one-cdp-attach.mjs',
       },
       {
         letter: 'H',
@@ -285,6 +299,7 @@ async function selectCellByReference(page: Page, ref: string) {
         change: 'G + 30 s behavioural warmup (google.com search → YouTube → accounts.google.com) + comprehensive init script: WebGL vendor/renderer (Intel Inc. / ANGLE), <code>hardwareConcurrency</code> = 8, <code>deviceMemory</code> = 8, <code>navigator.platform</code>, <code>navigator.connection</code>, Battery API stub, Permissions notifications = <code>Notification.permission</code>. Bezier mouse trajectories + variable typing.',
         wall: 'recaptcha-anchor',
         outcome: 'Strongest pure-Playwright cloak available. Still "Verify it\'s you". Google\'s wall holds.',
+        sourceUrl: 'https://github.com/vaclavnovotny/bot-arena/blob/main/scripts/external/business-one-stealth-deep.mjs',
       },
     ],
     testCode: `import { test, expect, chromium, type Page } from '@playwright/test';

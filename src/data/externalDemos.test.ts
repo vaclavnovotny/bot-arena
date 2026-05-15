@@ -60,6 +60,7 @@ describe('externalDemos data module', () => {
           expect(a.change.length).toBeGreaterThan(0);
           expect(validWalls).toContain(a.wall);
           expect(a.outcome.length).toBeGreaterThan(0);
+          expect(a.sourceUrl).toMatch(/^https:\/\/github\.com\/.+\/blob\/.+/);
         }
       }
     }
