@@ -405,11 +405,14 @@ test('B. real-chrome — channel: chrome + Win10 UA', async () => {
     ],
     problem:
       'Enterprise software is routinely delivered to the user\'s browser as a streamed Windows desktop — for data-sovereignty (data never leaves the datacentre or cloud region), for license-floating (concurrent vs. named-user ISV pricing), for compliance audit trails, and because decades-old Windows-only fat clients like SAP GUI, Oracle EBS Forms, Epic Hyperspace or AutoCAD will not be rewritten. Whether the bytes arrive via Citrix HDX, VMware/Omnissa Horizon Blast, PCoIP, Microsoft RDP-over-HTML5, TSplus, Cameyo, Kasm or Apache Guacamole, the browser-side result is the same: a single <code>&lt;canvas&gt;</code> (sometimes a <code>&lt;video&gt;</code>) driven over a WebSocket. No DOM, no ARIA, no <code>document.querySelector</code>.<br/><br/>' +
-      'Our TSplus demo verifies this concretely. The tab on /software/html5.html has exactly one <code>&lt;canvas id="JWTS_myCanvas"&gt;</code> inside <code>&lt;div id="RDP_JW_TS"&gt;</code>, and zero <code>&lt;input&gt;</code> / <code>&lt;textarea&gt;</code> elements anywhere on the page (probed at runtime). The canonical Playwright move on each step finds nothing:<br/><br/>' +
-      '<strong>Login.</strong> The "Log on" button is an <code>&lt;input type="button"&gt;</code> (not a <code>&lt;button&gt;</code>), so <code>button:has-text("Log on")</code> returns zero matches. Targeting by id (<code>#buttonLogOn</code>) is still a silent no-op until a 2-factor-auth probe XHR (POST <code>cgi-bin/hb.exe</code>, fired from the username field\'s <code>onblur</code>) completes and calls <code>enableLogonButton()</code> in its callback — the handler is only attached then.<br/><br/>' +
-      '<strong>Apps portal.</strong> Still real DOM. The Excel tile is reachable via <code>getByRole(\'link\', { name: /excel/i })</code>. Clicking it opens the RemoteApp in a new browser tab — and crosses the canvas boundary.<br/><br/>' +
-      '<strong>Inside the canvas.</strong> The Excel chrome — Start screen, "Blank workbook" tile, ribbon, formula bar, every grid cell — is pixels. <code>getByText("Blank workbook")</code>, <code>getByRole("gridcell")</code>, <code>locator("[aria-label=\'A1\']")</code> all return zero matches. The canvas has no <code>tabindex</code>, so <code>page.keyboard.type()</code> hits <code>document.body</code> and is silently dropped until a <code>page.mouse.click()</code> on the canvas makes JWS (TSplus\' HTML5 RDP client) treat the page as the input target.<br/><br/>' +
-      '<strong>Verification.</strong> The cell\'s value has no DOM representation. <code>textContent</code>, <code>inputValue</code>, ARIA-tree queries — all return nothing. The only readback path is the side channel: <code>Ctrl+C</code> on the selected cell, then <code>navigator.clipboard.readText()</code> — and only if the streaming host has remote-to-local clipboard redirection enabled AND the browser context was granted <code>clipboard-read</code> permission for the origin. Most production Citrix / Horizon / AVD deployments disable clipboard redirection by policy (it\'s the same path data-exfiltrates through), so in the real enterprise case this rescue does not exist either.',
+      '<strong>Variant A — naive DOM-based drive (the real Playwright result).</strong> A developer asked to "type Hello world into A1 of Excel" would reach for <code>getByText("Blank workbook").click()</code>, then <code>getByRole("gridcell", { name: "A1" }).fill(...)</code>, then <code>expect(...).toHaveText("Hello world")</code>. Every locator resolves to zero matches because the entire Excel UI — Start screen tiles, ribbon, formula bar, grid — is canvas pixels. <code>toBeVisible()</code> times out on the first selector. The recording on this card is exactly that run. This is the real result for any streamed-desktop session, not a Playwright skill issue.<br/><br/>' +
+      '<strong>Variant B — pixel-coordinate hack (NOT a real solution).</strong> Abandon selectors entirely and drive the canvas with hard-coded pixel coordinates, Office shortcuts, and the TSplus clipboard-sync side channel. It "passes" — but only because we knew, ahead of time and specifically for this Excel build at 1280×720:<br/>' +
+      '&nbsp;&nbsp;(i) where the Blank-workbook tile sits in the canvas,<br/>' +
+      '&nbsp;&nbsp;(ii) that pressing Escape twice closes the Office 2019+ Start screen,<br/>' +
+      '&nbsp;&nbsp;(iii) where A1 sits in the canvas at this DPI / ribbon / font,<br/>' +
+      '&nbsp;&nbsp;(iv) that demo.tsplus.net redirects the remote Windows clipboard back to the browser, AND that we granted <code>clipboard-read</code> permission for the origin.<br/>' +
+      'Change any one of those four prior-knowledge inputs and Variant B breaks. Cost it out at scale: every Excel version, every theme, every DPI multiplier, every Office locale needs its own per-pixel calibration — and most production Citrix / Horizon / AVD deployments <em>disable</em> remote-clipboard sync by policy (it\'s the exfiltration vector compliance teams are closing), so (iv) does not even hold. Variant B is the upper bound of what selector-based automation can do here. It is not a generalisable approach — it is a brittle, app-version-specific pixel hack.<br/><br/>' +
+      'The streamed-desktop pattern reduces to the same problem regardless of broker: SAP GUI in Citrix XenApp, Hyperspace in Horizon, AutoCAD in AVD, JD Edwards through TSplus — all collapse to pixels in a canvas. The Playwright wall is in the same place for all of them.',
     layers: [
       {
         status: 'reaches',
@@ -434,93 +437,94 @@ test('B. real-chrome — channel: chrome + Win10 UA', async () => {
     ],
     aivaFootnote:
       'AIVA reads the canvas pixels the way a human operator does — a tile is a thing it can recognize, a cell is a cell, a transaction code in SAP GUI is text it can locate on screen. Streamed RDP, Citrix HDX, VMware Blast, Microsoft AVD, browser-rendered SaaS — all collapse to the same pixel input.',
-    testCode: `import { test, expect, type Page } from '@playwright/test';
+    testCode: `import { test, expect } from '@playwright/test';
 
 const SUT = 'https://demo.tsplus.net/';
-const CELL_VALUE = 'Hello world';
 
-test('write "Hello world" into A1 of streamed Excel', async ({ page, context }) => {
-  test.use({ ignoreHTTPSErrors: true });          // demo.tsplus.net cert expired
+// Variant A — naive DOM-based drive. This is the real Playwright result
+// against a streamed-desktop session. Every locator inside the canvas
+// returns zero matches; toBeVisible() times out on the first one.
+test('A. naive — DOM selectors against the canvas', async ({ page, context }) => {
+  // ... login + open Excel tile (real DOM, works fine — see full source) ...
+  // ... canvas#JWTS_myCanvas mounts, Excel paints its Start screen inside ...
+
+  // First selector a developer would write — match the visible tile label.
+  // The "Blank workbook" tile IS rendered (visible to a human, visible in
+  // the screenshot), but it is painted into the canvas. getByText finds
+  // zero elements; toBeVisible times out.
+  const blankTile = appPage.getByText(/^Blank workbook$/i).first();
+  await expect(blankTile).toBeVisible({ timeout: 10_000 });   // ← FAILS HERE
+  await blankTile.click();
+
+  // Unreachable in practice — included so a reader can see the next two
+  // naive selectors a developer would write and confirm they too resolve
+  // to zero matches against the canvas:
+  const a1Cell = appPage.getByRole('gridcell', { name: 'A1' })
+    .or(appPage.locator('[aria-label="A1"]'));
+  await expect(a1Cell).toBeVisible({ timeout: 10_000 });
+  await a1Cell.fill('Hello world');
+  await expect(a1Cell).toHaveText('Hello world');
+});
+
+// Variant B — pixel-coordinate hack. Kept to be candid about what it
+// would take to "drive" Excel-on-canvas from stock Playwright. Requires
+// four pieces of app-version-specific prior knowledge:
+//   (i)   Blank-workbook tile pixel coords at 1280x720
+//   (ii)  Escape × 2 closes Office 2019+ Start screen
+//   (iii) A1 pixel coords at this DPI/theme/ribbon
+//   (iv)  Host redirects the remote clipboard AND clipboard-read granted
+// Change any one and Variant B breaks. This is the upper bound of what
+// selectors can do — not a generalisable approach.
+test('B. best-effort — pixel coords + Office shortcut + clipboard sync', async ({ page, context }) => {
   await context.grantPermissions(['clipboard-read', 'clipboard-write'], {
-    origin: 'https://demo.tsplus.net',             // needed for cell-value readback
+    origin: 'https://demo.tsplus.net',                          // (iv)
   });
-
-  // 1. Login form — naive selectors miss because the submit is <input>, not <button>.
-  await page.goto(SUT);
-  await page.locator('#Editbox1').fill('demo');
-  // Pressing Tab fires onblur → 2FA probe XHR → enableLogonButton(). Without
-  // waiting for it the Log-on click is a silent no-op.
-  const xhr = page.waitForResponse((r) => /cgi-bin\\/hb\\.exe/.test(r.url()));
-  await page.locator('#Editbox1').press('Tab');
-  await page.locator('#Editbox2').fill('demo');
-  await xhr;
-  await page.waitForFunction(() =>
-    (document.getElementById('buttonLogOn') as HTMLInputElement)?.onclick !== null
-  );
-  await page.locator('#buttonLogOn').click();
-
-  // 2. Apps portal — still real DOM. Click opens RemoteApp in a new tab.
-  await page.waitForURL(/index_applications\\.html/);
-  const [appPage] = await Promise.all([
-    context.waitForEvent('page'),
-    page.getByRole('link', { name: /excel/i }).first().click(),
-  ]);
-  const canvas = appPage.locator('canvas#JWTS_myCanvas').first();
-  await canvas.waitFor({ state: 'visible' });
-
-  // 3. CANVAS BOUNDARY ─────────────────────────────────────────────────────
-  // The naive spec ends here:
-  //
-  //   await appPage.getByText('Blank workbook').click();   // ← 0 matches
-  //   await appPage.getByRole('gridcell', { name: 'A1' })
-  //                 .fill('Hello world');                  // ← 0 matches
-  //   await expect(appPage.locator('[aria-label="A1"]'))
-  //                 .toHaveText('Hello world');            // ← 0 matches
-  //
-  // What works instead: a mouse-gesture to focus the canvas, Escape to
-  // dismiss the Start screen, a pixel-coordinate click on A1, keyboard
-  // type, and a clipboard side-channel for the readback.
-  await appPage.waitForTimeout(12_000);
+  // ... same login + open Excel tile ...
   const box = (await canvas.boundingBox())!;
-  await appPage.mouse.click(box.x + 640, box.y + 700);   // input gesture
-  await appPage.keyboard.press('Escape');                 // close Start screen
+
+  // (i) tile pixel. Click neutral whitespace first for the JWS input gesture.
+  await appPage.mouse.click(box.x + 640, box.y + 700);
+
+  // (ii) Escape twice — Office 2019+ shortcut to close the Start screen.
+  await appPage.keyboard.press('Escape');
   await appPage.waitForTimeout(1_500);
   await appPage.keyboard.press('Escape');
   await appPage.waitForTimeout(6_000);
 
-  await appPage.mouse.click(box.x + 58, box.y + 237);    // A1 by pixel
-  await appPage.keyboard.press('Control+Home');           // belt-and-braces
-  await appPage.keyboard.type(CELL_VALUE, { delay: 60 });
+  // (iii) A1 by hardcoded canvas pixel. Belt-and-braces Ctrl+Home.
+  await appPage.mouse.click(box.x + 58, box.y + 237);
+  await appPage.keyboard.press('Control+Home');
+  await appPage.keyboard.type('Hello world', { delay: 60 });
   await appPage.keyboard.press('Enter');
 
-  // 4. Readback — only possible because TSplus syncs the remote clipboard.
+  // (iv) Readback via clipboard side channel — the ONLY working path.
   await appPage.keyboard.press('Control+Home');
   await appPage.keyboard.press('Control+C');
   await appPage.waitForTimeout(800);
   const clip = await appPage.evaluate(() => navigator.clipboard.readText());
-  expect(clip.trim()).toBe(CELL_VALUE);                  // ← ✓ "Hello world"
+  expect(clip.trim()).toBe('Hello world');
 });`,
     failureLine:
-      'canvas-boundary annotation: A1 was typed and committed but stock Playwright cannot read it back without clipboard-sync or OCR — without context.grantPermissions([\'clipboard-read\']) the assertion has no DOM surface to read from.',
-    videoSrc: '/external/tsplus-excel-best-effort.webm',
-    posterSrc: '/external/tsplus-excel-10-a1-committed.png',
-    videoDuration: '32 s',
+      'TimeoutError: expect(locator).toBeVisible() failed — Locator: getByText(/^Blank workbook$/i).first(). Expected: visible. Error: element(s) not found. "Excel Start-screen \'Blank workbook\' tile should be reachable from the DOM — it is not, because the Start screen is painted into the canvas."',
+    videoSrc: '/external/tsplus-excel-fails.webm',
+    posterSrc: '/external/tsplus-excel-A-naive-06-after-warmup.png',
+    videoDuration: '40 s',
     stills: [
       {
-        src: '/external/tsplus-excel-04-excel-tile-visible.png',
-        caption: 'Apps portal after login — Microsoft Word / Excel / PowerPoint / Notepad tiles. This is the last point at which standard Playwright locators (<code>getByRole(\'link\', { name: /excel/i })</code>) work cleanly.',
+        src: '/external/tsplus-excel-A-naive-04-excel-tile-visible.png',
+        caption: 'Apps portal after login — Microsoft Word / Excel / PowerPoint / Notepad tiles. This is the LAST point at which standard Playwright locators (<code>getByRole(\'link\', { name: /excel/i })</code>) work cleanly. The instant the Excel tile is clicked, we cross the canvas boundary.',
       },
       {
-        src: '/external/tsplus-excel-05-canvas-mounted.png',
-        caption: 'New tab on /software/html5.html — a single <code>&lt;canvas id="JWTS_myCanvas"&gt;</code> inside <code>&lt;div id="RDP_JW_TS"&gt;</code>. No <code>tabindex</code>, no hidden <code>&lt;input&gt;</code>. Keyboard does not work until the canvas receives a mousedown gesture.',
+        src: '/external/tsplus-excel-A-naive-06-after-warmup.png',
+        caption: 'Variant A — the moment Playwright hits the wall. Excel\'s Start screen is fully painted into <code>&lt;canvas id="JWTS_myCanvas"&gt;</code>; a human sees the "Blank workbook" tile clearly. <code>appPage.getByText(/^Blank workbook$/i)</code> resolves to zero elements; <code>toBeVisible()</code> times out 10 s later.',
       },
       {
-        src: '/external/tsplus-excel-07-after-escape.png',
-        caption: 'Book1 reached after pressing <kbd>Escape</kbd> twice — Excel\'s Office 2019+ default behaviour. The "Blank workbook" tile click alone left us on the Start screen with only a hover-tooltip showing.',
+        src: '/external/tsplus-excel-B-besteffort-08-a1-selected.png',
+        caption: 'Variant B — A1 selected at canvas pixel (58, 237). Reaching this state required four pieces of prior knowledge: where the Blank-workbook tile is, that Escape × 2 closes the Office 2019+ Start screen, where A1 sits at 1280×720, and that the canvas needs a mousedown gesture before forwarding keystrokes.',
       },
       {
-        src: '/external/tsplus-excel-10-a1-committed.png',
-        caption: 'A1 = "Hello world", active cell advanced to A2 after <kbd>Enter</kbd>. The only programmatic way to confirm this from inside the browser is the <code>Ctrl+C → navigator.clipboard.readText()</code> side channel, which requires the TSplus host to redirect the remote clipboard and the test to grant <code>clipboard-read</code> permission for the origin.',
+        src: '/external/tsplus-excel-B-besteffort-10-a1-committed.png',
+        caption: 'Variant B — A1 = "Hello world", active cell advanced to A2 after <kbd>Enter</kbd>. The only programmatic way to confirm the value is the <code>Ctrl+C → navigator.clipboard.readText()</code> side channel — and only because demo.tsplus.net allows remote-clipboard redirection. Most production Citrix / Horizon / AVD deployments disable this by policy.',
       },
     ],
     aivaVideoSrc: '/external/tsplus-excel-aiva.mp4',
