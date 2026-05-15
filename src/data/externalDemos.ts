@@ -1,5 +1,5 @@
 export interface ExternalDemo {
-  id: 'odoo-spreadsheet';
+  id: 'odoo-spreadsheet' | 'business-one-google';
   title: string;
   category: string;
   demoUrl: string;
@@ -32,14 +32,25 @@ export interface ExternalDemo {
   posterSrc: string;
   /** Human-readable duration label, e.g. "23 s". */
   videoDuration: string;
-  /** Public path to the AIVA proof recording (the same task, completed). */
-  aivaVideoSrc: string;
-  /** Short description of what the AIVA recording shows. */
-  aivaVideoCaption: string;
-  /** Public path to the AIVA platform's step-by-step log screenshot. */
-  aivaStepsImageSrc: string;
-  /** Caption rendered under the step-log screenshot. */
-  aivaStepsCaption: string;
+  /**
+   * Extra still-image proof captured during the Playwright run — used when a
+   * single video clip can't show every failure mode (e.g. the same SUT
+   * blocks different Playwright variants in distinct ways).
+   */
+  stills?: Array<{ src: string; caption: string }>;
+  /**
+   * AIVA-side proof. Optional because some demos ship as Playwright-only
+   * proofs first, with the AIVA recording added later.
+   */
+  aivaVideoSrc?: string;
+  aivaVideoCaption?: string;
+  aivaStepsImageSrc?: string;
+  aivaStepsCaption?: string;
+  /**
+   * Text to show in place of the AIVA recording when the recording isn't
+   * available yet. Required iff aivaVideoSrc is omitted.
+   */
+  aivaPendingNote?: string;
 }
 
 export const externalDemos: ExternalDemo[] = [
@@ -156,5 +167,126 @@ async function selectCellByReference(page: Page, ref: string) {
     aivaStepsImageSrc: '/external/odoo-spreadsheet-aiva-steps.jpg',
     aivaStepsCaption:
       'The AIVA test-run log records every step it took on the canvas — clicking "TOTAL", opening Insert → Row above, typing each value, pressing Tab. The screenshot is exported from AIVA\'s test-runs viewer. Login credentials have been redacted for publication.',
+  },
+  {
+    id: 'business-one-google',
+    title: 'Sign in to SAP Business One Cloud with a Google account',
+    category: 'SaaS gateway',
+    demoUrl: 'https://www.business-one.cloud/en/',
+    goal:
+      'A prospect wants to evaluate SAP Business One Cloud using their company Google Workspace identity — Login → "Sign in with Google" → land on the authenticated dashboard. The same flow a sales engineer would script before showing the product to a customer.',
+    steps: [
+      'Open https://www.business-one.cloud/en/.',
+      'Click "Login" — a Microsoft B2C popup opens.',
+      'Choose "Google" on the B2C social-sign-in panel.',
+      'On accounts.google.com, fill the email and click Next.',
+      'Fill the password and click Next.',
+      'Land on the authenticated SAP Business One Cloud dashboard.',
+    ],
+    problem:
+      'business-one.cloud itself is a plain Astro/SAP marketing site — its DOM is trivially scriptable. But the moment the flow hands off to <code>accounts.google.com</code>, Google\'s anti-automation engine inspects the browser at two distinct depths and stops the test at one of them every single time: a fingerprint check on the email page, and a reCAPTCHA "Verify it\'s you" challenge on the next step.',
+    layers: [
+      {
+        status: 'reaches',
+        name: 'business-one.cloud marketing site + Microsoft B2C selector',
+        detail: 'Standard locators work here: <code>getByRole(\'link\', { name: \'Login\' })</code> opens the B2C popup; <code>getByRole(\'button\', { name: \'Google\' })</code> launches the federated flow. This is what the recording shows succeeding for the first ~6 seconds.',
+      },
+      {
+        status: 'fails',
+        name: 'accounts.google.com — Google\'s automation fingerprint check',
+        detail: 'Headless chromium (with or without stealth init scripts that hide <code>navigator.webdriver</code> / fake <code>plugins</code> / restore <code>window.chrome</code>) is rejected immediately after pressing Next: <strong>"Couldn\'t sign you in — this browser or app may not be secure."</strong> Google never asks for a password. The variants A (naive), C (stealth) and D (jittered human-cadence typing + mouse drift) all stop here.',
+      },
+      {
+        status: 'fails',
+        name: 'accounts.google.com — reCAPTCHA "I\'m not a robot" + image challenge',
+        detail: 'Switching to channel <code>chrome</code> (real Chrome + Win10 UA) or a persistent <code>user-data-dir</code> gets past the fingerprint check — Google then escalates to <strong>"Verify it\'s you · Confirm you\'re not a robot"</strong>. Clicking the checkbox opens the canvas-rendered image grid ("Select all squares with bicycles"). The grid is a <code>&lt;canvas&gt;</code> inside a Google-owned iframe; <code>getByText(\'bicycle\')</code> resolves to zero elements. Variants B, E and F stop here.',
+      },
+      {
+        status: 'opaque',
+        name: 'Behind the wall — SAP Business One web client, app modules, ERP data',
+        detail: 'Never reached. Every Playwright variant stops on Google\'s side; the actual SAP B1 surface (the thing the test was supposed to drive) is unobservable from selector-based automation.',
+      },
+    ],
+    aivaFootnote:
+      'AIVA reads the reCAPTCHA image grid the same way a human would — by looking at the pixels — and clicks the bicycle tiles. The fingerprint-rejection path doesn\'t apply because AIVA drives a real desktop browser, not a WebDriver-controlled one.',
+    testCode: `import { test, expect, chromium, type Page } from '@playwright/test';
+
+const SUT_URL = 'https://www.business-one.cloud/en/';
+const GOOGLE_EMAIL = process.env.GOOGLE_EMAIL!;
+const GOOGLE_PASSWORD = process.env.GOOGLE_PASSWORD!;
+
+// Shared flow. Each variant differs only in the *browser fingerprint*
+// (stealth init script, real-chrome channel, persistent user-data-dir).
+async function attemptGoogleSignIn(page: Page) {
+  // 1. business-one.cloud — Login opens a B2C popup via window.open().
+  await page.goto(SUT_URL);
+  const [popup] = await Promise.all([
+    page.context().waitForEvent('page'),
+    page.getByRole('link', { name: /^(login|anmelden)$/i }).first().click(),
+  ]);
+  await popup.waitForLoadState('domcontentloaded');
+
+  // 2. B2C social-sign-in form: LinkedIn / Microsoft / Google.
+  await popup.getByRole('button', { name: /^google$/i }).click();
+  await popup.waitForURL(/accounts\\.google\\.com/);
+
+  // 3. Email page.
+  await popup.locator('input[type="email"]').fill(GOOGLE_EMAIL);
+  await popup.getByRole('button', { name: /^next$/i }).click();
+
+  // 4. Wait for whichever wall Google chooses:
+  //    - Password input (the happy path)
+  //    - /signin/rejected   (headless fingerprint detected)
+  //    - reCAPTCHA iframe   (real-Chrome path, hits "Verify it's you")
+  await Promise.race([
+    popup.locator('input[type="password"]').waitFor({ state: 'visible' }),
+    popup.getByText(/couldn't sign you in/i).waitFor(),
+    popup.frameLocator('iframe[src*="/recaptcha/"]').first().locator('body').waitFor(),
+  ]);
+  return popup;
+}
+
+test('A. naive — default chromium, default UA', async ({ page }) => {
+  const opened = await attemptGoogleSignIn(page);
+  expect(opened.url()).toMatch(/business-one\\.cloud/); // ← fails on /signin/rejected
+});
+
+test('B. real-chrome — channel: chrome + Win10 UA', async () => {
+  const browser = await chromium.launch({
+    channel: 'chrome',
+    headless: false,
+    args: ['--disable-blink-features=AutomationControlled'],
+  });
+  const context = await browser.newContext({
+    userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) ... Chrome/132.0.0.0 ...',
+  });
+  const page = await context.newPage();
+  const opened = await attemptGoogleSignIn(page);
+  expect(opened.url()).toMatch(/business-one\\.cloud/); // ← fails on reCAPTCHA
+});
+
+// Variants C (stealth init script) and D (jittered typing) hit the
+// same /signin/rejected wall as A. Variants E (persistent user-data-dir)
+// and F (click "I'm not a robot") hit the same image-grid challenge as B.`,
+    failureLine: 'Error: naive variant should have landed on business-one but ended on https://accounts.google.com/v3/signin/rejected?idnf=p8142864%40gmail.com…',
+    videoSrc: '/external/business-one-google-fails.webm',
+    posterSrc: '/external/business-one-google-rejected.png',
+    videoDuration: '30 s',
+    stills: [
+      {
+        src: '/external/business-one-google-rejected.png',
+        caption: 'Variants A / C / D — Google rejects automation fingerprint with "Couldn\'t sign you in — this browser or app may not be secure" before asking for a password.',
+      },
+      {
+        src: '/external/business-one-google-B-real-chrome-99-blocked.png',
+        caption: 'Variants B / E — switching to channel \'chrome\' clears the fingerprint check; Google escalates to a reCAPTCHA "Verify it\'s you" wall.',
+      },
+      {
+        src: '/external/business-one-google-recaptcha.png',
+        caption: 'Variant F clicks the "I\'m not a robot" checkbox; Google answers with the canvas-rendered image grid ("Select all squares with bicycles") — unsolvable from the DOM.',
+      },
+    ],
+    aivaPendingNote:
+      'AIVA recording for this demo is being captured separately on the agentic-aiva platform. The Playwright artifacts above are the proof side: six different fingerprint / behavioural escalations, all blocked on Google\'s side before SAP Business One Cloud is ever reached.',
   },
 ];

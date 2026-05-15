@@ -6,6 +6,10 @@ describe('externalDemos data module', () => {
     expect(externalDemos.map((d) => d.id)).toContain('odoo-spreadsheet');
   });
 
+  it('contains the business-one-google entry', () => {
+    expect(externalDemos.map((d) => d.id)).toContain('business-one-google');
+  });
+
   it('every entry is fully populated', () => {
     expect(externalDemos.length).toBeGreaterThan(0);
     for (const d of externalDemos) {
@@ -28,10 +32,23 @@ describe('externalDemos data module', () => {
       expect(d.videoSrc).toMatch(/\.webm$/);
       expect(d.posterSrc).toMatch(/\.(png|jpg|jpeg|webp)$/);
       expect(d.videoDuration.length).toBeGreaterThan(0);
-      expect(d.aivaVideoSrc).toMatch(/\.(mp4|webm)$/);
-      expect(d.aivaVideoCaption.length).toBeGreaterThan(0);
-      expect(d.aivaStepsImageSrc).toMatch(/\.(png|jpg|jpeg|webp)$/);
-      expect(d.aivaStepsCaption.length).toBeGreaterThan(0);
+      // AIVA evidence is optional — entries shipped Playwright-first must
+      // instead carry an aivaPendingNote so the page has *something* to
+      // render in the AIVA slot.
+      if (d.aivaVideoSrc) {
+        expect(d.aivaVideoSrc).toMatch(/\.(mp4|webm)$/);
+        expect(d.aivaVideoCaption?.length ?? 0).toBeGreaterThan(0);
+        expect(d.aivaStepsImageSrc).toMatch(/\.(png|jpg|jpeg|webp)$/);
+        expect(d.aivaStepsCaption?.length ?? 0).toBeGreaterThan(0);
+      } else {
+        expect(d.aivaPendingNote?.length ?? 0).toBeGreaterThan(0);
+      }
+      if (d.stills) {
+        for (const s of d.stills) {
+          expect(s.src).toMatch(/\.(png|jpg|jpeg|webp)$/);
+          expect(s.caption.length).toBeGreaterThan(0);
+        }
+      }
     }
   });
 });
