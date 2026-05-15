@@ -4,6 +4,7 @@ import { externalDemos } from '../data/externalDemos';
 
 const categoryPillClass: Record<string, string> = {
   'Open-source ERP': 'bg-amber-100 text-amber-900',
+  'Streamed desktop': 'bg-sky-100 text-sky-900',
 };
 
 const layerVariant: Record<'reaches' | 'fails' | 'opaque', { pillBg: string; cardBorder: string; pillText: string }> = {
@@ -28,6 +29,7 @@ const layerVariant: Record<'reaches' | 'fails' | 'opaque', { pillBg: string; car
 const tabLabel: Record<typeof externalDemos[number]['id'], string> = {
   'odoo-spreadsheet': 'Odoo Spreadsheet',
   'business-one-google': 'SAP B1 · Google sign-in',
+  'tsplus-excel': 'Streamed enterprise apps',
 };
 
 // odoo-spreadsheet is the exemplar and loads by default. Keep this index in
@@ -42,7 +44,7 @@ const defaultTabId = 'odoo-spreadsheet';
     <title>External demos — Bot Arena</title>
     <meta
       name="description"
-      content="Two ways Playwright runs out of road on public SaaS: canvas-rendered application surfaces (Odoo Spreadsheet) and third-party IdP gateways with reCAPTCHA (SAP Business One Cloud + Sign in with Google)."
+      content="Three ways Playwright runs out of road on public SaaS: canvas-rendered application surfaces (Odoo Spreadsheet), third-party IdP gateways with reCAPTCHA (SAP Business One Cloud + Sign in with Google), and streamed-desktop sessions where the whole app is pixels over WebSocket (TSplus + Microsoft Excel)."
     />
   </head>
   <body class="min-h-screen bg-slate-50 text-slate-900">
@@ -69,11 +71,14 @@ const defaultTabId = 'odoo-spreadsheet';
         Where Playwright runs out of road in public SaaS
       </h1>
       <p class="mt-3 max-w-3xl text-slate-600">
-        Selector-based automation runs out of road in two distinct ways on the public web:
+        Selector-based automation runs out of road in three distinct ways on the public web:
         the <strong>application surface</strong> goes opaque when working areas render to
-        <code class="rounded bg-slate-100 px-1 py-0.5 text-[11px]">&lt;canvas&gt;</code>, and the
+        <code class="rounded bg-slate-100 px-1 py-0.5 text-[11px]">&lt;canvas&gt;</code>; the
         <strong>gateway</strong> slams shut when third-party identity providers actively reject
-        WebDriver-controlled browsers before the SaaS even loads. Pick a case study below.
+        WebDriver-controlled browsers before the SaaS even loads; and the
+        <strong>entire desktop</strong> arrives as pixels over WebSocket when the app is delivered
+        through a streamed-desktop session (Citrix HDX, VMware Blast, TSplus HTML5 RDP). Pick a
+        case study below.
       </p>
 
       <!-- Tab strip — one tab per externalDemos entry. -->
@@ -117,6 +122,61 @@ const defaultTabId = 'odoo-spreadsheet';
             hidden={!isDefault}
             tabindex="0"
           >
+            {d.id === 'tsplus-excel' && (
+              <div class="mt-6 grid gap-3 sm:grid-cols-3">
+                <div class="rounded-lg border border-slate-200 bg-white p-4">
+                  <p class="text-xs font-semibold uppercase tracking-wide text-slate-400">The vendor, at scale</p>
+                  <p class="mt-1 text-2xl font-bold tracking-tight text-slate-900">98%</p>
+                  <p class="mt-0.5 text-[11px] font-semibold uppercase tracking-wide text-slate-500">of the Fortune 500 — on Citrix alone</p>
+                  <p class="mt-2 text-xs leading-relaxed text-slate-600">
+                    Citrix advertises
+                    <a href="https://www.citrix.com/blogs/2026/02/02/three-years-five-use-cases-a-leader-citrix/" target="_blank" rel="noopener" class="underline decoration-slate-300 underline-offset-2 hover:decoration-slate-700"><strong>100 million+ users across 400,000 organizations, 99% of the Fortune 100 and 98% of the Fortune 500</strong></a>.
+                    VMware/Omnissa Horizon, Microsoft AVD + Windows 365 Cloud PC, TSplus, Cameyo and Apache Guacamole all sit on top of that — every seat sees the published app as a server-side bitmap painted into the browser, not as DOM.
+                  </p>
+                </div>
+                <div class="rounded-lg border border-slate-200 bg-white p-4">
+                  <p class="text-xs font-semibold uppercase tracking-wide text-slate-400">The category</p>
+                  <p class="mt-1 text-2xl font-bold tracking-tight text-slate-900">$4.3B → $6.0B</p>
+                  <p class="mt-0.5 text-[11px] font-semibold uppercase tracking-wide text-slate-500">DaaS market by 2029 (Gartner)</p>
+                  <p class="mt-2 text-xs leading-relaxed text-slate-600">
+                    <a href="https://virtualizationreview.com/articles/2025/08/14/gartner-daas-expands-beyond-remote-work-in-2025.aspx" target="_blank" rel="noopener" class="underline decoration-slate-300 underline-offset-2 hover:decoration-slate-700">Gartner&apos;s 2025 Magic Quadrant</a>:
+                    <strong>$4.3B in 2025 → $6.0B by 2029 (7.9% CAGR)</strong>. Planning assumption: by 2027 virtual desktops are cost-effective for <strong>95% of workers</strong> (up from 40% in 2019) and the primary workspace for 20%. The streamed-canvas surface is growing, not shrinking.
+                  </p>
+                </div>
+                <div class="rounded-lg border border-sky-200 bg-sky-50/40 p-4">
+                  <p class="text-xs font-semibold uppercase tracking-wide text-sky-800">Killer example</p>
+                  <p class="mt-1 text-2xl font-bold tracking-tight text-slate-900">43.7%</p>
+                  <p class="mt-0.5 text-[11px] font-semibold uppercase tracking-wide text-slate-500">of US hospitals run Epic — virtually all delivered via Citrix</p>
+                  <p class="mt-2 text-xs leading-relaxed text-slate-600">
+                    <a href="https://hitconsultant.net/2026/05/14/klas-2026-ehr-market-share-report/" target="_blank" rel="noopener" class="underline decoration-slate-300 underline-offset-2 hover:decoration-slate-700">KLAS 2026</a>: Epic owns <strong>43.7% of US acute-care hospitals, 56.9% of inpatient beds</strong>.
+                    Epic Hyperspace ran as a Citrix-published Windows fat client at virtually every Epic shop; the
+                    <a href="https://ehc.consulting/a-new-era-for-epic-application-delivery/" target="_blank" rel="noopener" class="underline decoration-slate-300 underline-offset-2 hover:decoration-slate-700">Hyperdrive web-replacement migration is still mid-flight through 2026</a>,
+                    and many sites deliver Hyperdrive itself inside a Citrix session — so the clinician&apos;s browser still sees pixels in a canvas.
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {d.id === 'tsplus-excel' && (
+              <div class="mt-4 rounded-lg border border-slate-200 bg-slate-50 p-4">
+                <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Enterprise apps commonly delivered through a streamed canvas</p>
+                <ul class="mt-2 grid list-disc gap-1 pl-5 text-xs leading-relaxed text-slate-700 sm:grid-cols-2">
+                  <li><strong>SAP GUI for Windows</strong> — Citrix says
+                    <a href="https://www.werts.nl/docs/Citrix/SAP%20GUI%206.40%20for%20Windows%20WP.pdf" target="_blank" rel="noopener" class="underline decoration-slate-300 underline-offset-2 hover:decoration-slate-700">40%+ of SAP customers</a>
+                    run SAP GUI through Citrix; latency-sensitive RFC stays inside the datacentre.</li>
+                  <li><strong>Oracle E-Business Suite Forms / JD Edwards</strong> — Java/Forms fat clients delivered via Citrix to avoid per-desktop JRE rollouts and keep WAN users responsive.</li>
+                  <li><strong>Epic Hyperspace / Hyperdrive</strong> — the dominant US EHR, classically Citrix-published into clinical workstations and tap-and-go thin clients.</li>
+                  <li><strong>Bloomberg Terminal</strong> —
+                    <a href="https://assets.bbhub.io/professional/sites/10/Terminal-Mode-Citrix-Workspace-Overview.pdf" target="_blank" rel="noopener" class="underline decoration-slate-300 underline-offset-2 hover:decoration-slate-700">officially supported on Citrix XenApp/Workspace</a>;
+                    standard pattern on locked-down trading floors.</li>
+                  <li><strong>AutoCAD / Revit / SolidWorks / Siemens NX</strong> — Citrix + NVIDIA vGPU for license-floating and to keep multi-GB CAD files off engineers&apos; laptops.</li>
+                  <li><strong>Microsoft Dynamics GP/AX, Sage 100/300/X3, Infor M3/LN, IFS</strong> — Windows-only ERP fat clients that nobody is rewriting; Citrix/RDS is the standard delivery vehicle.</li>
+                  <li><strong>IBM i / AS400 Access Client Solutions</strong> — green-screen and Java navigator delivered via Citrix or RDS to extend mid-range workload life.</li>
+                  <li><strong>The TSplus public demo here</strong> — same HTML5 RDP plumbing (canvas + WebSocket), just unrestricted access for proof.</li>
+                </ul>
+              </div>
+            )}
+
             {d.id === 'odoo-spreadsheet' && (
               <div class="mt-6 grid gap-3 sm:grid-cols-3">
                 <div class="rounded-lg border border-slate-200 bg-white p-4">

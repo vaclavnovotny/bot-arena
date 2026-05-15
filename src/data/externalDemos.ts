@@ -1,5 +1,5 @@
 export interface ExternalDemo {
-  id: 'odoo-spreadsheet' | 'business-one-google';
+  id: 'odoo-spreadsheet' | 'business-one-google' | 'tsplus-excel';
   title: string;
   category: string;
   demoUrl: string;
@@ -386,5 +386,144 @@ test('B. real-chrome — channel: chrome + Win10 UA', async () => {
     aivaVideoSrc: '/external/business-one-google-aiva.mp4',
     aivaVideoCaption:
       'AIVA driving the exact same flow end-to-end on a real desktop browser — clicking Login on business-one.cloud, choosing Google on the B2C popup, typing the email, then reading the reCAPTCHA image grid as rendered pixels and clicking the matching tiles. The eight pure-Playwright variants above all fail on this last step; AIVA does not run into either Google wall because it does not look like an automated browser to Google\'s engine in the first place.',
+  },
+  {
+    id: 'tsplus-excel',
+    title: 'Drive an enterprise app streamed as a browser canvas',
+    category: 'Streamed desktop',
+    demoUrl: 'https://demo.tsplus.net/',
+    goal:
+      'An engineer wants to script a line-of-business app delivered as a streamed Windows session into the browser. In the wild that is SAP GUI, Oracle E-Business Suite Forms, JD Edwards EnterpriseOne, Epic Hyperspace, Bloomberg Terminal or AutoCAD — published through Citrix, VMware/Omnissa Horizon, Microsoft AVD, TSplus, Cameyo, Kasm or Apache Guacamole. The browser-side result is identical across all of them: one <code>&lt;canvas&gt;</code> painted from a WebSocket. Our publicly-reachable proof point is the TSplus demo (demo / demo, no card, no sales call) driving Microsoft Excel — we ask it to type "Hello world" into A1 and read it back, and run that script against the same canvas-streaming plumbing any of the enterprise targets above use.',
+    steps: [
+      'Open https://demo.tsplus.net/ and log in with demo / demo.',
+      'Click the "Microsoft Excel" tile in the published-apps portal.',
+      'Wait for the HTML5 RDP canvas to mount in the new tab.',
+      'Dismiss the Excel Start screen and land on a blank Book1.',
+      'Select cell A1.',
+      'Type "Hello world" and press Enter.',
+      'Read A1 back and assert it equals "Hello world".',
+    ],
+    problem:
+      'Enterprise software is routinely delivered to the user\'s browser as a streamed Windows desktop — for data-sovereignty (data never leaves the datacentre or cloud region), for license-floating (concurrent vs. named-user ISV pricing), for compliance audit trails, and because decades-old Windows-only fat clients like SAP GUI, Oracle EBS Forms, Epic Hyperspace or AutoCAD will not be rewritten. Whether the bytes arrive via Citrix HDX, VMware/Omnissa Horizon Blast, PCoIP, Microsoft RDP-over-HTML5, TSplus, Cameyo, Kasm or Apache Guacamole, the browser-side result is the same: a single <code>&lt;canvas&gt;</code> (sometimes a <code>&lt;video&gt;</code>) driven over a WebSocket. No DOM, no ARIA, no <code>document.querySelector</code>.<br/><br/>' +
+      'Our TSplus demo verifies this concretely. The tab on /software/html5.html has exactly one <code>&lt;canvas id="JWTS_myCanvas"&gt;</code> inside <code>&lt;div id="RDP_JW_TS"&gt;</code>, and zero <code>&lt;input&gt;</code> / <code>&lt;textarea&gt;</code> elements anywhere on the page (probed at runtime). The canonical Playwright move on each step finds nothing:<br/><br/>' +
+      '<strong>Login.</strong> The "Log on" button is an <code>&lt;input type="button"&gt;</code> (not a <code>&lt;button&gt;</code>), so <code>button:has-text("Log on")</code> returns zero matches. Targeting by id (<code>#buttonLogOn</code>) is still a silent no-op until a 2-factor-auth probe XHR (POST <code>cgi-bin/hb.exe</code>, fired from the username field\'s <code>onblur</code>) completes and calls <code>enableLogonButton()</code> in its callback — the handler is only attached then.<br/><br/>' +
+      '<strong>Apps portal.</strong> Still real DOM. The Excel tile is reachable via <code>getByRole(\'link\', { name: /excel/i })</code>. Clicking it opens the RemoteApp in a new browser tab — and crosses the canvas boundary.<br/><br/>' +
+      '<strong>Inside the canvas.</strong> The Excel chrome — Start screen, "Blank workbook" tile, ribbon, formula bar, every grid cell — is pixels. <code>getByText("Blank workbook")</code>, <code>getByRole("gridcell")</code>, <code>locator("[aria-label=\'A1\']")</code> all return zero matches. The canvas has no <code>tabindex</code>, so <code>page.keyboard.type()</code> hits <code>document.body</code> and is silently dropped until a <code>page.mouse.click()</code> on the canvas makes JWS (TSplus\' HTML5 RDP client) treat the page as the input target.<br/><br/>' +
+      '<strong>Verification.</strong> The cell\'s value has no DOM representation. <code>textContent</code>, <code>inputValue</code>, ARIA-tree queries — all return nothing. The only readback path is the side channel: <code>Ctrl+C</code> on the selected cell, then <code>navigator.clipboard.readText()</code> — and only if the streaming host has remote-to-local clipboard redirection enabled AND the browser context was granted <code>clipboard-read</code> permission for the origin. Most production Citrix / Horizon / AVD deployments disable clipboard redirection by policy (it\'s the same path data-exfiltrates through), so in the real enterprise case this rescue does not exist either.',
+    layers: [
+      {
+        status: 'reaches',
+        name: 'Streaming-broker portal — login form, published-apps grid',
+        detail: 'Citrix StoreFront, Horizon HTML Access, Microsoft RD Web Access, TSplus Web Portal — all render as real DOM. Standard locators work for username / password / tile click. TSplus has one gotcha worth flagging: <code>#buttonLogOn.onclick</code> is only attached after the <code>cgi-bin/hb.exe</code> 2FA-status XHR returns, so the spec must Tab between fills and wait for that response before clicking.',
+      },
+      {
+        status: 'reaches',
+        name: 'HTML5 streaming canvas — keyboard/mouse forwarding',
+        detail: 'JWS (TSplus), Citrix HTML5 Workspace, Horizon HTML Access, Apache Guacamole and AWS WorkSpaces Web Access all forward keystrokes and mouse events over WebSocket to the remote session — but only after a <code>page.mouse.click()</code> on the canvas. The canvas has no <code>tabindex</code>, so <code>locator(\'canvas\').focus()</code> does nothing; the mousedown gesture is the only path. Every subsequent click is a pixel coordinate against a layout we cannot inspect.',
+      },
+      {
+        status: 'opaque',
+        name: 'Streamed application UI — every menu, dialog, dropdown, grid cell',
+        detail: 'Excel ribbon, SAP GUI transaction codes, Hyperspace patient-chart tabs, AutoCAD command line — all painted. <code>getByText</code>, <code>getByRole</code>, <code>locator(\'[aria-label=…]\')</code> → zero matches inside the streaming canvas. Dismissing the Excel Start screen in our demo requires pressing <kbd>Escape</kbd> (Office 2019+ shortcut) because the "Blank workbook" tile click registered as a hover-tooltip — the canvas pixel rendered, but the activation event was lost in our first runs.',
+      },
+      {
+        status: 'fails',
+        name: 'Verification — reading any value back from the streamed app',
+        detail: 'No DOM, no ARIA, no <code>inputValue</code>. The only working readback is <code>Ctrl+C → navigator.clipboard.readText()</code> via remote-clipboard sync — which requires both the host enabling clipboard redirection AND the browser context being granted <code>clipboard-read</code>. The TSplus demo permits it; most production Citrix / Horizon / AVD policies disable clipboard redirection precisely because it\'s the data-exfiltration vector compliance teams are trying to close.',
+      },
+    ],
+    aivaFootnote:
+      'AIVA reads the canvas pixels the way a human operator does — a tile is a thing it can recognize, a cell is a cell, a transaction code in SAP GUI is text it can locate on screen. Streamed RDP, Citrix HDX, VMware Blast, Microsoft AVD, browser-rendered SaaS — all collapse to the same pixel input.',
+    testCode: `import { test, expect, type Page } from '@playwright/test';
+
+const SUT = 'https://demo.tsplus.net/';
+const CELL_VALUE = 'Hello world';
+
+test('write "Hello world" into A1 of streamed Excel', async ({ page, context }) => {
+  test.use({ ignoreHTTPSErrors: true });          // demo.tsplus.net cert expired
+  await context.grantPermissions(['clipboard-read', 'clipboard-write'], {
+    origin: 'https://demo.tsplus.net',             // needed for cell-value readback
+  });
+
+  // 1. Login form — naive selectors miss because the submit is <input>, not <button>.
+  await page.goto(SUT);
+  await page.locator('#Editbox1').fill('demo');
+  // Pressing Tab fires onblur → 2FA probe XHR → enableLogonButton(). Without
+  // waiting for it the Log-on click is a silent no-op.
+  const xhr = page.waitForResponse((r) => /cgi-bin\\/hb\\.exe/.test(r.url()));
+  await page.locator('#Editbox1').press('Tab');
+  await page.locator('#Editbox2').fill('demo');
+  await xhr;
+  await page.waitForFunction(() =>
+    (document.getElementById('buttonLogOn') as HTMLInputElement)?.onclick !== null
+  );
+  await page.locator('#buttonLogOn').click();
+
+  // 2. Apps portal — still real DOM. Click opens RemoteApp in a new tab.
+  await page.waitForURL(/index_applications\\.html/);
+  const [appPage] = await Promise.all([
+    context.waitForEvent('page'),
+    page.getByRole('link', { name: /excel/i }).first().click(),
+  ]);
+  const canvas = appPage.locator('canvas#JWTS_myCanvas').first();
+  await canvas.waitFor({ state: 'visible' });
+
+  // 3. CANVAS BOUNDARY ─────────────────────────────────────────────────────
+  // The naive spec ends here:
+  //
+  //   await appPage.getByText('Blank workbook').click();   // ← 0 matches
+  //   await appPage.getByRole('gridcell', { name: 'A1' })
+  //                 .fill('Hello world');                  // ← 0 matches
+  //   await expect(appPage.locator('[aria-label="A1"]'))
+  //                 .toHaveText('Hello world');            // ← 0 matches
+  //
+  // What works instead: a mouse-gesture to focus the canvas, Escape to
+  // dismiss the Start screen, a pixel-coordinate click on A1, keyboard
+  // type, and a clipboard side-channel for the readback.
+  await appPage.waitForTimeout(12_000);
+  const box = (await canvas.boundingBox())!;
+  await appPage.mouse.click(box.x + 640, box.y + 700);   // input gesture
+  await appPage.keyboard.press('Escape');                 // close Start screen
+  await appPage.waitForTimeout(1_500);
+  await appPage.keyboard.press('Escape');
+  await appPage.waitForTimeout(6_000);
+
+  await appPage.mouse.click(box.x + 58, box.y + 237);    // A1 by pixel
+  await appPage.keyboard.press('Control+Home');           // belt-and-braces
+  await appPage.keyboard.type(CELL_VALUE, { delay: 60 });
+  await appPage.keyboard.press('Enter');
+
+  // 4. Readback — only possible because TSplus syncs the remote clipboard.
+  await appPage.keyboard.press('Control+Home');
+  await appPage.keyboard.press('Control+C');
+  await appPage.waitForTimeout(800);
+  const clip = await appPage.evaluate(() => navigator.clipboard.readText());
+  expect(clip.trim()).toBe(CELL_VALUE);                  // ← ✓ "Hello world"
+});`,
+    failureLine:
+      'canvas-boundary annotation: A1 was typed and committed but stock Playwright cannot read it back without clipboard-sync or OCR — without context.grantPermissions([\'clipboard-read\']) the assertion has no DOM surface to read from.',
+    videoSrc: '/external/tsplus-excel-best-effort.webm',
+    posterSrc: '/external/tsplus-excel-10-a1-committed.png',
+    videoDuration: '32 s',
+    stills: [
+      {
+        src: '/external/tsplus-excel-04-excel-tile-visible.png',
+        caption: 'Apps portal after login — Microsoft Word / Excel / PowerPoint / Notepad tiles. This is the last point at which standard Playwright locators (<code>getByRole(\'link\', { name: /excel/i })</code>) work cleanly.',
+      },
+      {
+        src: '/external/tsplus-excel-05-canvas-mounted.png',
+        caption: 'New tab on /software/html5.html — a single <code>&lt;canvas id="JWTS_myCanvas"&gt;</code> inside <code>&lt;div id="RDP_JW_TS"&gt;</code>. No <code>tabindex</code>, no hidden <code>&lt;input&gt;</code>. Keyboard does not work until the canvas receives a mousedown gesture.',
+      },
+      {
+        src: '/external/tsplus-excel-07-after-escape.png',
+        caption: 'Book1 reached after pressing <kbd>Escape</kbd> twice — Excel\'s Office 2019+ default behaviour. The "Blank workbook" tile click alone left us on the Start screen with only a hover-tooltip showing.',
+      },
+      {
+        src: '/external/tsplus-excel-10-a1-committed.png',
+        caption: 'A1 = "Hello world", active cell advanced to A2 after <kbd>Enter</kbd>. The only programmatic way to confirm this from inside the browser is the <code>Ctrl+C → navigator.clipboard.readText()</code> side channel, which requires the TSplus host to redirect the remote clipboard and the test to grant <code>clipboard-read</code> permission for the origin.',
+      },
+    ],
+    aivaPendingNote:
+      'AIVA recording for this third failure mode (streamed-desktop sessions) is on the AIVA team\'s queue. The canvas-pixel input model is identical to the Odoo grid case; the additional complication is RDP keystroke-forwarding latency, which AIVA already handles for Citrix HDX / VMware Blast targets.',
   },
 ];

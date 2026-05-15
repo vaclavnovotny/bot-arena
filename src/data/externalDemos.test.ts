@@ -10,6 +10,10 @@ describe('externalDemos data module', () => {
     expect(externalDemos.map((d) => d.id)).toContain('business-one-google');
   });
 
+  it('contains the tsplus-excel entry', () => {
+    expect(externalDemos.map((d) => d.id)).toContain('tsplus-excel');
+  });
+
   it('every entry is fully populated', () => {
     expect(externalDemos.length).toBeGreaterThan(0);
     for (const d of externalDemos) {
