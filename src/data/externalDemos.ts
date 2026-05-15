@@ -39,6 +39,24 @@ export interface ExternalDemo {
    */
   stills?: Array<{ src: string; caption: string }>;
   /**
+   * Structured log of every Playwright variant attempted against this SUT.
+   * Rendered as a table on the page. The `wall` field drives colour-coding:
+   * fingerprint = rejected before password, recaptcha-anchor = stopped at
+   * "I'm not a robot" checkbox, recaptcha-image = stopped at the image grid.
+   * Used when "one test failed" is the wrong frame — when the story is "we
+   * tried eight different escalations and they all stopped on the same wall."
+   */
+  attempts?: Array<{
+    letter: string;
+    name: string;
+    /** What this variant added on top of the previous one — keep terse. */
+    change: string;
+    /** Which wall halted the run; drives the per-row colour pill. */
+    wall: 'fingerprint' | 'recaptcha-anchor' | 'recaptcha-image';
+    /** One-sentence outcome (what URL / what message Google returned). */
+    outcome: string;
+  }>;
+  /**
    * AIVA-side proof. Optional because some demos ship as Playwright-only
    * proofs first, with the AIVA recording added later.
    */
@@ -184,7 +202,9 @@ async function selectCellByReference(page: Page, ref: string) {
       'Land on the authenticated SAP Business One Cloud dashboard.',
     ],
     problem:
-      'business-one.cloud itself is a plain Astro/SAP marketing site — its DOM is trivially scriptable. But the moment the flow hands off to <code>accounts.google.com</code>, Google\'s anti-automation engine inspects the browser at two distinct depths and stops the test at one of them every single time: a fingerprint check on the email page, and a reCAPTCHA "Verify it\'s you" challenge on the next step.',
+      'SAP Business One Cloud itself is fine — its Login link is a plain anchor, and the Microsoft B2C popup that opens is a regular form with named buttons. The "Sign in with Google" button is the cliff edge: from there, the flow is owned by <code>accounts.google.com</code>, and Google\'s anti-automation engine runs <strong>two consecutive checks</strong> before SAP B1 ever loads.<br/><br/>' +
+      '<strong>Stage 1 — browser fingerprint check (email step).</strong> Google inspects <code>navigator.webdriver</code>, the plugin / mime-type arrays, <code>navigator.languages</code>, the <code>window.chrome</code> object surface, the WebGL vendor/renderer string, <code>hardwareConcurrency</code> / <code>deviceMemory</code>, the Permissions API\'s behaviour, the Battery API, and at the launch level whether the browser was started with <code>--enable-automation</code> or exposes a <code>DevToolsActivePort</code> file. Any single tell → <strong>"Couldn\'t sign you in — this browser or app may not be secure."</strong> The password field never appears.<br/><br/>' +
+      '<strong>Stage 2 — reCAPTCHA "Verify it\'s you" (post-email).</strong> If the fingerprint check passes, Google runs a risk score (cookie age, IP reputation, mouse-movement entropy, and Stage-1 signals as inputs) and chooses whether to silently pass the "I\'m not a robot" checkbox or escalate to the image grid ("Select all squares with fire hydrants"). The image grid is <code>&lt;canvas&gt;</code> inside a Google-owned iframe; the answer is image classification, unsolvable from the DOM. The SAP B1 dashboard is never reached.',
     layers: [
       {
         status: 'reaches',
@@ -193,18 +213,13 @@ async function selectCellByReference(page: Page, ref: string) {
       },
       {
         status: 'fails',
-        name: 'accounts.google.com — Google\'s automation fingerprint check',
-        detail: 'Headless chromium (with or without stealth init scripts that hide <code>navigator.webdriver</code> / fake <code>plugins</code> / restore <code>window.chrome</code>) is rejected immediately after pressing Next: <strong>"Couldn\'t sign you in — this browser or app may not be secure."</strong> Google never asks for a password. The variants A (naive), C (stealth) and D (jittered human-cadence typing + mouse drift) all stop here.',
+        name: 'accounts.google.com · Stage 1 — automation fingerprint check',
+        detail: 'Inspected at the email-submit step. No matter how thorough the in-page stealth init script is, certain signals (launch flags, DevToolsActivePort presence, CDP-protocol attach pattern) leak through and route the session to <code>/signin/rejected</code>. The password field is never reached.',
       },
       {
         status: 'fails',
-        name: 'accounts.google.com — reCAPTCHA "I\'m not a robot" + image challenge',
-        detail: 'Switching to channel <code>chrome</code> (real Chrome + Win10 UA) or a persistent <code>user-data-dir</code> gets past the fingerprint check — Google then escalates to <strong>"Verify it\'s you · Confirm you\'re not a robot"</strong>. Clicking the checkbox opens the canvas-rendered image grid ("Select all squares with bicycles"). The grid is a <code>&lt;canvas&gt;</code> inside a Google-owned iframe; <code>getByText(\'bicycle\')</code> resolves to zero elements. Variants B, E and F stop here.',
-      },
-      {
-        status: 'fails',
-        name: 'accounts.google.com — even with CDP-attach + warmup + full stealth',
-        detail: 'The strongest pure-Playwright move: launch real Chrome externally (no <code>--enable-automation</code> flag), attach via <code>chromium.connectOverCDP()</code>, run a 30-second behavioural warmup (google.com search → YouTube → accounts.google.com) through a *persistent* user-data-dir, then submit the email with Bezier mouse trajectories and per-character variable typing cadence. Stealth init script masks <code>navigator.webdriver</code>, plugins, languages, <code>window.chrome</code>, WebGL vendor/renderer, <code>hardwareConcurrency</code>, <code>deviceMemory</code>, the Permissions API and the Battery API. <strong>reCAPTCHA still fires.</strong> Variants G (CDP attach) and H (CDP + warmup + comprehensive stealth) both stop here.',
+        name: 'accounts.google.com · Stage 2 — reCAPTCHA "Verify it\'s you"',
+        detail: 'When Stage 1 passes (real Chrome via <code>channel: \'chrome\'</code> or <code>connectOverCDP</code>), Google escalates to "Verify it\'s you · Confirm you\'re not a robot". Even a high-trust profile gets the image grid; <code>getByText(\'fire hydrant\')</code> resolves to zero elements because the tiles are painted into a canvas inside a Google iframe.',
       },
       {
         status: 'opaque',
@@ -213,7 +228,65 @@ async function selectCellByReference(page: Page, ref: string) {
       },
     ],
     aivaFootnote:
-      'AIVA reads the reCAPTCHA image grid the same way a human would — by looking at the pixels — and clicks the bicycle tiles. The fingerprint-rejection path doesn\'t apply because AIVA drives a real desktop browser, not a WebDriver-controlled one.',
+      'AIVA drives a real desktop browser, not a WebDriver-controlled one — Stage 1 doesn\'t apply. For Stage 2 it reads the image grid the same way a human does (rendered pixels) and clicks the matching tiles.',
+    attempts: [
+      {
+        letter: 'A',
+        name: 'Naive headless',
+        change: 'Default chromium, default UA, no flags',
+        wall: 'fingerprint',
+        outcome: 'Lands on <code>/signin/rejected?idnf=…</code> immediately after Next. "This browser or app may not be secure."',
+      },
+      {
+        letter: 'B',
+        name: 'Real Chrome channel',
+        change: 'A + <code>channel: \'chrome\'</code> + Win10 Chrome UA + <code>--disable-blink-features=AutomationControlled</code>',
+        wall: 'recaptcha-anchor',
+        outcome: 'Fingerprint check passes. Lands on "Verify it\'s you" with the reCAPTCHA "I\'m not a robot" checkbox.',
+      },
+      {
+        letter: 'C',
+        name: 'Stealth init script',
+        change: 'A + <code>addInitScript</code>: delete <code>navigator.webdriver</code>, fake <code>plugins</code> / <code>mimeTypes</code>, restore <code>window.chrome.runtime</code>, override <code>navigator.languages</code> / Permissions API',
+        wall: 'fingerprint',
+        outcome: 'Same as A — the stealth surface is not enough on its own without a real Chrome binary underneath.',
+      },
+      {
+        letter: 'D',
+        name: 'Human cadence',
+        change: 'C + per-character typing delay 60–180 ms, mouse drift to element centroid before each click, occasional thinking pauses',
+        wall: 'fingerprint',
+        outcome: 'Identical to A / C. Google flags before any human behavioural signal can register.',
+      },
+      {
+        letter: 'E',
+        name: 'Persistent profile',
+        change: 'B + <code>chromium.launchPersistentContext({ userDataDir })</code> so cookies and history accumulate between runs',
+        wall: 'recaptcha-anchor',
+        outcome: 'Same wall as B. An empty-then-warmed profile doesn\'t accumulate enough trust in one session.',
+      },
+      {
+        letter: 'F',
+        name: 'Click the reCAPTCHA checkbox',
+        change: 'E + <code>frameLocator(\'iframe[src*="/recaptcha/"]\').click("I\'m not a robot")</code>',
+        wall: 'recaptcha-image',
+        outcome: 'Image grid opens — "Select all squares with fire hydrants". Tiles are <code>&lt;canvas&gt;</code> inside a Google iframe; cannot be classified from the DOM.',
+      },
+      {
+        letter: 'G',
+        name: 'CDP attach to external Chrome',
+        change: '<code>chromium.connectOverCDP()</code> to a Chrome launched manually with <code>--remote-debugging-port</code> — not via Playwright, so the WebDriver-launch signature (<code>--enable-automation</code>, <code>DevToolsActivePort</code> file) never gets set',
+        wall: 'recaptcha-anchor',
+        outcome: 'Past Stage 1 — but Stage 2 still fires. The launch-time signature was the last residual sub-fingerprint that B / E couldn\'t hide.',
+      },
+      {
+        letter: 'H',
+        name: 'CDP + warmup + comprehensive stealth',
+        change: 'G + 30 s behavioural warmup (google.com search → YouTube → accounts.google.com) + comprehensive init script: WebGL vendor/renderer (Intel Inc. / ANGLE), <code>hardwareConcurrency</code> = 8, <code>deviceMemory</code> = 8, <code>navigator.platform</code>, <code>navigator.connection</code>, Battery API stub, Permissions notifications = <code>Notification.permission</code>. Bezier mouse trajectories + variable typing.',
+        wall: 'recaptcha-anchor',
+        outcome: 'Strongest pure-Playwright cloak available. Still "Verify it\'s you". Google\'s wall holds.',
+      },
+    ],
     testCode: `import { test, expect, chromium, type Page } from '@playwright/test';
 
 const SUT_URL = 'https://www.business-one.cloud/en/';
@@ -296,6 +369,6 @@ test('B. real-chrome — channel: chrome + Win10 UA', async () => {
       },
     ],
     aivaPendingNote:
-      'AIVA recording for this demo is being captured separately on the agentic-aiva platform. The Playwright artifacts above are the proof side: six different fingerprint / behavioural escalations, all blocked on Google\'s side before SAP Business One Cloud is ever reached.',
+      'AIVA recording for this demo is being captured separately on the agentic-aiva platform. The Playwright artifacts above are the proof side: eight escalating variants across both Google walls, all blocked before SAP Business One Cloud is ever reached.',
   },
 ];

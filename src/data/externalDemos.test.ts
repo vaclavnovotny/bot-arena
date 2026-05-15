@@ -49,6 +49,16 @@ describe('externalDemos data module', () => {
           expect(s.caption.length).toBeGreaterThan(0);
         }
       }
+      if (d.attempts) {
+        const validWalls = ['fingerprint', 'recaptcha-anchor', 'recaptcha-image'];
+        for (const a of d.attempts) {
+          expect(a.letter.length).toBeGreaterThan(0);
+          expect(a.name.length).toBeGreaterThan(0);
+          expect(a.change.length).toBeGreaterThan(0);
+          expect(validWalls).toContain(a.wall);
+          expect(a.outcome.length).toBeGreaterThan(0);
+        }
+      }
     }
   });
 });

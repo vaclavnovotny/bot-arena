@@ -207,6 +207,58 @@ const defaultTabId = 'odoo-spreadsheet';
               </ol>
               <p class="mt-2 text-xs italic text-slate-500">{d.aivaFootnote}</p>
 
+              {d.attempts && d.attempts.length > 0 && (
+                <>
+                  <h3 class="mt-6 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                    Attempts log
+                    <span class="ml-2 font-normal normal-case tracking-normal text-slate-400">
+                      every pure-Playwright escalation we tried, in order
+                    </span>
+                  </h3>
+                  <div class="mt-2 overflow-x-auto rounded-md border border-slate-200">
+                    <table class="w-full min-w-[640px] text-left text-xs">
+                      <thead class="bg-slate-50 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                        <tr>
+                          <th class="px-3 py-2 w-6">#</th>
+                          <th class="px-3 py-2 w-44">Variant</th>
+                          <th class="px-3 py-2">What changed vs. previous</th>
+                          <th class="px-3 py-2 w-40">Stopped at</th>
+                        </tr>
+                      </thead>
+                      <tbody class="divide-y divide-slate-200 bg-white">
+                        {d.attempts.map((a) => {
+                          const wallPill =
+                            a.wall === 'fingerprint'
+                              ? { bg: 'bg-rose-100 text-rose-800 ring-1 ring-rose-300', label: 'Fingerprint reject' }
+                              : a.wall === 'recaptcha-anchor'
+                              ? { bg: 'bg-amber-100 text-amber-800 ring-1 ring-amber-300', label: 'reCAPTCHA · checkbox' }
+                              : { bg: 'bg-rose-100 text-rose-800 ring-1 ring-rose-400', label: 'reCAPTCHA · image grid' };
+                          return (
+                            <tr class="align-top">
+                              <td class="px-3 py-2 font-mono font-semibold text-slate-700">{a.letter}</td>
+                              <td class="px-3 py-2 text-sm font-medium text-slate-900">{a.name}</td>
+                              <td class="px-3 py-2 leading-relaxed text-slate-700" set:html={a.change} />
+                              <td class="px-3 py-2">
+                                <span class={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${wallPill.bg}`}>
+                                  {wallPill.label}
+                                </span>
+                                <p class="mt-1.5 leading-relaxed text-slate-600" set:html={a.outcome} />
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                  <p class="mt-2 text-[11px] italic text-slate-500">
+                    Eight variants, two distinct Google walls. The strongest pure-Playwright cloak (H)
+                    clears the fingerprint check but still triggers reCAPTCHA. Beyond H the next move is
+                    no longer a cloaking change — it's a vision model (AIVA) or a one-time human captcha
+                    solve to bootstrap a storage-state replay.
+                  </p>
+                </>
+              )}
+
               <div class="mt-6 flex flex-wrap items-center gap-2">
                 <span class="inline-flex items-center rounded-full bg-rose-100 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-rose-800 ring-1 ring-rose-300">
                   ✗ Fails
