@@ -14,3 +14,8 @@ playwright/.cache/
 
 # Local tooling
 .superpowers/
+
+# Captured storage-state from external-demo bootstrap scripts. Contains
+# session cookies for SAP Business One Cloud after a human-solved captcha;
+# never commit.
+scripts/external/auth.json
