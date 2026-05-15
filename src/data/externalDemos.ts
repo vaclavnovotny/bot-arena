@@ -523,7 +523,8 @@ test('write "Hello world" into A1 of streamed Excel', async ({ page, context }) 
         caption: 'A1 = "Hello world", active cell advanced to A2 after <kbd>Enter</kbd>. The only programmatic way to confirm this from inside the browser is the <code>Ctrl+C → navigator.clipboard.readText()</code> side channel, which requires the TSplus host to redirect the remote clipboard and the test to grant <code>clipboard-read</code> permission for the origin.',
       },
     ],
-    aivaPendingNote:
-      'AIVA recording for this third failure mode (streamed-desktop sessions) is on the AIVA team\'s queue. The canvas-pixel input model is identical to the Odoo grid case; the additional complication is RDP keystroke-forwarding latency, which AIVA already handles for Citrix HDX / VMware Blast targets.',
+    aivaVideoSrc: '/external/tsplus-excel-aiva.mp4',
+    aivaVideoCaption:
+      'AIVA driving the same TSplus-streamed Excel session end-to-end — clicking "Blank workbook" on the Start screen as a recognised tile, targeting cell A1 as a cell, typing "Hello world", then reading it back from the rendered grid. The eight Playwright walls (no DOM tile, no <code>tabindex</code> on the canvas, no DOM cell, no readback path without clipboard sync) do not apply: AIVA reads the pixels the same way a human operator does, so streamed RDP, Citrix HDX, VMware Blast, Horizon HTML Access and Microsoft AVD all collapse to the same input.',
   },
 ];
