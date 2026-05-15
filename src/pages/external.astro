@@ -32,6 +32,17 @@ const tabLabel: Record<typeof externalDemos[number]['id'], string> = {
   'tsplus-excel': 'Streamed enterprise apps',
 };
 
+const tabStatus: Record<typeof externalDemos[number]['id'], 'confirmed' | 'potential'> = {
+  'odoo-spreadsheet': 'confirmed',
+  'business-one-google': 'potential',
+  'tsplus-excel': 'confirmed',
+};
+
+const tabStatusPill: Record<'confirmed' | 'potential', string> = {
+  confirmed: 'bg-emerald-100 text-emerald-800 ring-1 ring-emerald-200',
+  potential: 'bg-amber-100 text-amber-800 ring-1 ring-amber-200',
+};
+
 // odoo-spreadsheet is the exemplar and loads by default. Keep this index in
 // sync with the `tabLabel` ordering if more demos are added later.
 const defaultTabId = 'odoo-spreadsheet';
@@ -65,7 +76,7 @@ const defaultTabId = 'odoo-spreadsheet';
       </div>
     </header>
 
-    <main class="mx-auto max-w-3xl px-6 py-12">
+    <main class="mx-auto max-w-5xl px-6 py-12">
       <p class="text-xs font-semibold uppercase tracking-widest text-slate-500">Out of arena</p>
       <h1 class="mt-2 text-3xl font-bold tracking-tight sm:text-4xl">
         Where Playwright runs out of road in public SaaS
@@ -98,14 +109,22 @@ const defaultTabId = 'odoo-spreadsheet';
               aria-selected={isDefault ? 'true' : 'false'}
               data-tab-target={d.id}
               class:list={[
-                'group relative -mb-px rounded-t-md px-4 py-2 text-sm font-medium transition',
+                'group relative -mb-px inline-flex items-center gap-2 rounded-t-md px-4 py-2 text-sm font-medium transition',
                 'border border-b-0',
                 isDefault
                   ? 'border-slate-200 bg-white text-slate-900'
                   : 'border-transparent text-slate-500 hover:text-slate-900 hover:bg-slate-100',
               ]}
             >
-              {tabLabel[d.id]}
+              <span>{tabLabel[d.id]}</span>
+              <span
+                class:list={[
+                  'rounded-full px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide',
+                  tabStatusPill[tabStatus[d.id]],
+                ]}
+              >
+                {tabStatus[d.id]}
+              </span>
             </button>
           );
         })}
