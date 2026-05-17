@@ -43,9 +43,10 @@ const tabStatusPill: Record<'confirmed' | 'potential', string> = {
   potential: 'bg-amber-100 text-amber-800 ring-1 ring-amber-200',
 };
 
-// odoo-spreadsheet is the exemplar and loads by default. Keep this index in
-// sync with the `tabLabel` ordering if more demos are added later.
-const defaultTabId = 'odoo-spreadsheet';
+// tsplus-excel (the streamed-canvas pattern) is the headline demo and loads
+// by default. Keep this in sync with the `externalDemos` array order if the
+// lineup changes later.
+const defaultTabId = 'tsplus-excel';
 ---
 <html lang="en">
   <head>
