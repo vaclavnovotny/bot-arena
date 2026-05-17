@@ -29,13 +29,13 @@ const layerVariant: Record<'reaches' | 'fails' | 'opaque', { pillBg: string; car
 const tabLabel: Record<typeof externalDemos[number]['id'], string> = {
   'odoo-spreadsheet': 'Odoo Spreadsheet',
   'business-one-google': 'SAP B1 · Google sign-in',
-  'tsplus-excel': 'Streamed enterprise apps',
+  'streamed-apps': 'Streamed enterprise apps',
 };
 
 const tabStatus: Record<typeof externalDemos[number]['id'], 'confirmed' | 'potential'> = {
   'odoo-spreadsheet': 'confirmed',
   'business-one-google': 'potential',
-  'tsplus-excel': 'confirmed',
+  'streamed-apps': 'confirmed',
 };
 
 const tabStatusPill: Record<'confirmed' | 'potential', string> = {
@@ -43,10 +43,10 @@ const tabStatusPill: Record<'confirmed' | 'potential', string> = {
   potential: 'bg-amber-100 text-amber-800 ring-1 ring-amber-200',
 };
 
-// tsplus-excel (the streamed-canvas pattern) is the headline demo and loads
+// streamed-apps (the streamed-canvas pattern) is the headline demo and loads
 // by default. Keep this in sync with the `externalDemos` array order if the
 // lineup changes later.
-const defaultTabId = 'tsplus-excel';
+const defaultTabId = 'streamed-apps';
 ---
 <html lang="en">
   <head>
@@ -142,7 +142,7 @@ const defaultTabId = 'tsplus-excel';
             hidden={!isDefault}
             tabindex="0"
           >
-            {d.id === 'tsplus-excel' && (
+            {d.id === 'streamed-apps' && (
               <div class="mt-6 grid gap-3 sm:grid-cols-3">
                 <div class="rounded-lg border border-slate-200 bg-white p-4">
                   <p class="text-xs font-semibold uppercase tracking-wide text-slate-400">The vendor, at scale</p>
@@ -177,7 +177,7 @@ const defaultTabId = 'tsplus-excel';
               </div>
             )}
 
-            {d.id === 'tsplus-excel' && (
+            {d.id === 'streamed-apps' && (
               <div class="mt-4 rounded-lg border border-slate-200 bg-slate-50 p-4">
                 <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Enterprise apps commonly delivered through a streamed canvas</p>
                 <ul class="mt-2 grid list-disc gap-1 pl-5 text-xs leading-relaxed text-slate-700 sm:grid-cols-2">
@@ -197,7 +197,7 @@ const defaultTabId = 'tsplus-excel';
               </div>
             )}
 
-            {d.id === 'tsplus-excel' && (
+            {d.id === 'streamed-apps' && (
               <figure class="mt-4 rounded-lg border border-sky-200 bg-sky-50/40 p-4">
                 <figcaption class="text-xs font-semibold uppercase tracking-wide text-sky-800">Internal evidence — our own customers run our product in Citrix</figcaption>
                 <p class="mt-1 text-xs leading-relaxed text-slate-700">

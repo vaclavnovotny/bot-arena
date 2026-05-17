@@ -1,5 +1,5 @@
 export interface ExternalDemo {
-  id: 'odoo-spreadsheet' | 'business-one-google' | 'tsplus-excel';
+  id: 'odoo-spreadsheet' | 'business-one-google' | 'streamed-apps';
   title: string;
   category: string;
   demoUrl: string;
@@ -80,7 +80,7 @@ export interface ExternalDemo {
 
 export const externalDemos: ExternalDemo[] = [
   {
-    id: 'tsplus-excel',
+    id: 'streamed-apps',
     title: 'Drive an enterprise app streamed as a browser canvas',
     category: 'Streamed desktop',
     demoUrl: 'https://demo.tsplus.net/',
